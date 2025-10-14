@@ -4,104 +4,69 @@ import org.bukkit.Location;
 import org.bukkit.util.Vector;
 
 /**
- * 3D вектор для математических расчетов
- * author: Андрій Будильников
+ * Трехмерный вектор для математических операций
+ * Предоставляет методы для работы с трехмерными координатами
  */
 public class Vector3D {
-    private double x;
-    private double y;
-    private double z;
-
-    public Vector3D() {
-        this(0, 0, 0);
-    }
-
+    private final double x, y, z;
+    
+    /**
+     * Создает новый вектор с указанными координатами
+     * @param x координата X
+     * @param y координата Y
+     * @param z координата Z
+     */
     public Vector3D(double x, double y, double z) {
         this.x = x;
         this.y = y;
         this.z = z;
     }
-
+    
+    /**
+     * Создает новый вектор из местоположения Bukkit
+     * @param location местоположение Bukkit
+     */
     public Vector3D(Location location) {
         this(location.getX(), location.getY(), location.getZ());
     }
-
+    
+    /**
+     * Создает новый вектор из вектора Bukkit
+     * @param vector вектор Bukkit
+     */
     public Vector3D(Vector vector) {
         this(vector.getX(), vector.getY(), vector.getZ());
     }
-
-
+    
+    /**
+     * Получает координату X
+     * @return координата X
+     */
     public double getX() {
         return x;
     }
-
-    public void setX(double x) {
-        this.x = x;
-    }
-
+    
+    /**
+     * Получает координату Y
+     * @return координата Y
+     */
     public double getY() {
         return y;
     }
-
-    public void setY(double y) {
-        this.y = y;
-    }
-
+    
+    /**
+     * Получает координату Z
+     * @return координата Z
+     */
     public double getZ() {
         return z;
     }
-
-    public void setZ(double z) {
-        this.z = z;
-    }
-
-
-    public Vector3D add(Vector3D other) {
-        return new Vector3D(x + other.x, y + other.y, z + other.z);
-    }
-
-    public Vector3D subtract(Vector3D other) {
-        return new Vector3D(x - other.x, y - other.y, z - other.z);
-    }
-
-    public Vector3D multiply(double scalar) {
-        return new Vector3D(x * scalar, y * scalar, z * scalar);
-    }
-
-    public double dot(Vector3D other) {
-        return x * other.x + y * other.y + z * other.z;
-    }
-
-    public Vector3D cross(Vector3D other) {
-        return new Vector3D(
-            y * other.z - z * other.y,
-            z * other.x - x * other.z,
-            x * other.y - y * other.x
-        );
-    }
-
-    public double length() {
-        return Math.sqrt(x * x + y * y + z * z);
-    }
-
-    public Vector3D normalize() {
-        double length = length();
-        if (length == 0) return this;
-        return new Vector3D(x / length, y / length, z / length);
-    }
-
-    public double distance(Vector3D other) {
-        double dx = x - other.x;
-        double dy = y - other.y;
-        double dz = z - other.z;
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-
+    
     /**
-     * Интерполирует между двумя векторами
-     * @param other второй вектор
-     * @param t параметр от 0 до 1
-     * @return новый вектор между исходными
+     * Вычисляет линейную интерполяцию между этим вектором и другим вектором
+     * @param other другой вектор
+     * @param t параметр интерполяции (0.0 = этот вектор, 1.0 = другой вектор)
+     * @return интерполированный вектор
      */
     public Vector3D lerp(Vector3D other, double t) {
         return new Vector3D(
@@ -110,36 +75,51 @@ public class Vector3D {
             z + (other.z - z) * t
         );
     }
-
+    
+    /**
+     * Вычисляет расстояние до другого вектора
+     * @param other другой вектор
+     * @return расстояние до другого вектора
+     */
+    public double distance(Vector3D other) {
+        double dx = x - other.x;
+        double dy = y - other.y;
+        double dz = z - other.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    
+    /**
+     * Складывает этот вектор с другим вектором
+     * @param other другой вектор
+     * @return результат сложения векторов
+     */
+    public Vector3D add(Vector3D other) {
+        return new Vector3D(x + other.x, y + other.y, z + other.z);
+    }
+    
+    /**
+     * Вычисляет скалярное произведение этого вектора с другим вектором
+     * @param other другой вектор
+     * @return скалярное произведение
+     */
+    public double dot(Vector3D other) {
+        return x * other.x + y * other.y + z * other.z;
+    }
+    
+    /**
+     * Преобразует этот вектор в вектор Bukkit
+     * @return вектор Bukkit
+     */
     public Vector toBukkitVector() {
         return new Vector(x, y, z);
     }
-
-    public Location toLocation(org.bukkit.World world) {
-        return new Location(world, x, y, z);
-    }
-
+    
     @Override
     public String toString() {
-        return String.format("Vector3D{x=%.2f, y=%.2f, z=%.2f}", x, y, z);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Vector3D vector3D = (Vector3D) obj;
-        return Double.compare(vector3D.x, x) == 0 &&
-               Double.compare(vector3D.y, y) == 0 &&
-               Double.compare(vector3D.z, z) == 0;
-    }
-
-    @Override
-    public int hashCode() {
-        long bits = 7L;
-        bits = 31L * bits + Double.doubleToLongBits(x);
-        bits = 31L * bits + Double.doubleToLongBits(y);
-        bits = 31L * bits + Double.doubleToLongBits(z);
-        return (int) (bits ^ (bits >>> 32));
+        return "Vector3D{" +
+                "x=" + x +
+                ", y=" + y +
+                ", z=" + z +
+                '}';
     }
 }
