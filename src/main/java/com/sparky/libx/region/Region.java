@@ -1,11 +1,11 @@
 package com.sparky.libx.region;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Абстрактный класс, представляющий регион в мире
@@ -67,7 +67,6 @@ public abstract class Region implements ConfigurationSerializable {
     public static Region deserialize(Map<String, Object> args) {
         String type = (String) args.get("type");
         
-
         switch (type.toLowerCase()) {
             case "cuboid":
                 return CuboidRegion.deserialize(args);

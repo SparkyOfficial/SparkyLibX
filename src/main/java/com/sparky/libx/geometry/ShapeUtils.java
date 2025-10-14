@@ -6,19 +6,17 @@ import java.util.List;
 import org.bukkit.util.Vector;
 
 /**
- * Набор полезных функций для работы с геометрическими фигурами
- * author: Андрій Будильников
+ * Утилиты для работы с геометрическими формами
+ * @author Андрій Будильников
  */
-public final class ShapeUtils {
-    
-    private ShapeUtils() {}
+public class ShapeUtils {
     
     /**
-     * Создает точки вдоль линии между двумя позициями
-     * @param start начальная позиция
-     * @param end конечная позиция
-     * @param stepSize расстояние между точками
-     * @return список векторов точек на линии
+     * Создает линию из точек между двумя векторами
+     * @param start начальная точка
+     * @param end конечная точка
+     * @param stepSize размер шага между точками
+     * @return список точек линии
      */
     public static List<Vector> getLinePoints(Vector start, Vector end, double stepSize) {
         List<Vector> points = new ArrayList<>();
@@ -30,7 +28,6 @@ public final class ShapeUtils {
             points.add(start.clone().add(direction.clone().multiply(d / stepSize)));
         }
         
-        // убеждаемся что конечная точка всегда включена
         if (!points.contains(end)) {
             points.add(end.clone());
         }
@@ -69,23 +66,15 @@ public final class ShapeUtils {
     public static List<Vector> getSpherePoints(Vector center, double radius, int points) {
         List<Vector> spherePoints = new ArrayList<>();
         
-        double phi = Math.PI * (3.0 - Math.sqrt(5.0)); // золотое сечение для равномерного распределения
+        double phi = Math.PI * (3.0 - Math.sqrt(5.0));
 
         
         for (int i = 0; i < points; i++) {
-
             double y = 1 - (i / (double) (points - 1)) * 2;
-            
-
             double radiusAtY = Math.sqrt(1 - y * y);
-            
-
             double theta = phi * i;
-            
-
             double x = Math.cos(theta) * radiusAtY;
             double z = Math.sin(theta) * radiusAtY;
-            
 
             Vector point = new Vector(
                 center.getX() + x * radius,
@@ -111,8 +100,6 @@ public final class ShapeUtils {
             return false;
         }
         
-        // простая проверка через ограничивающий прямоугольник
-        // подходит для квадратов и прямоугольников
         double minX = polygon.get(0).getX();
         double maxX = minX;
         double minZ = polygon.get(0).getZ();
@@ -130,7 +117,6 @@ public final class ShapeUtils {
         double px = point.getX();
         double pz = point.getZ();
         
-        // для квадратных регионов работает как надо
         return (px >= minX && px <= maxX && pz >= minZ && pz <= maxZ);
     }
     
@@ -165,17 +151,14 @@ public final class ShapeUtils {
      * @return true если отрезки пересекаются
      */
     public static boolean doSegmentsIntersect(Vector p1, Vector p2, Vector p3, Vector p4) {
-
         int o1 = orientation(p1, p2, p3);
         int o2 = orientation(p1, p2, p4);
         int o3 = orientation(p3, p4, p1);
         int o4 = orientation(p3, p4, p2);
-        
 
         if (o1 != o2 && o3 != o4) {
             return true;
         }
-        
 
         if (o1 == 0 && onSegment(p1, p3, p2)) return true;
         if (o2 == 0 && onSegment(p1, p4, p2)) return true;
@@ -184,7 +167,6 @@ public final class ShapeUtils {
         
         return false;
     }
-    
 
     private static int orientation(Vector p, Vector q, Vector r) {
         double val = (q.getZ() - p.getZ()) * (r.getX() - q.getX()) - 
@@ -193,7 +175,6 @@ public final class ShapeUtils {
         if (val == 0) return 0;
         return (val > 0) ? 1 : 2;
     }
-    
 
     private static boolean onSegment(Vector p, Vector q, Vector r) {
         return q.getX() <= Math.max(p.getX(), r.getX()) && 

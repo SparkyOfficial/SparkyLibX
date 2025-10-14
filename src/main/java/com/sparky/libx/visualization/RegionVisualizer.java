@@ -29,7 +29,6 @@ public class RegionVisualizer {
     private final Map<String, VisualizationStyle> styles = new HashMap<>();
     
     public RegionVisualizer() {
-
         registerStyle("default", new VisualizationStyle(
             Particle.REDSTONE,
             new Particle.DustOptions(Color.RED, 1.0f),
@@ -55,16 +54,12 @@ public class RegionVisualizer {
     }
     
     public void visualize(Player player, Region region, VisualizationStyle style) {
-
         stopVisualization(player);
-        
 
         VisualTask task = new VisualTask(player, region, style);
         task.runTaskTimer(Bukkit.getPluginManager().getPlugin("SparkyLibX"), 0, 1);
-        
 
         activeVisualizations.put(player.getUniqueId(), task);
-        
 
         if (style.getDuration() > 0) {
             Bukkit.getScheduler().runTaskLater(
@@ -175,7 +170,6 @@ public class RegionVisualizer {
             
             World world = player.getWorld();
             Location playerLoc = player.getLocation();
-            
 
             for (int i = 0; i < style.getParticlesPerTick() && !points.isEmpty(); i++) {
                 if (currentIndex >= points.size()) {
@@ -184,7 +178,6 @@ public class RegionVisualizer {
                 
                 Vector point = points.get(currentIndex++);
                 Location particleLoc = new Location(world, point.getX(), point.getY(), point.getZ());
-                
 
                 if (playerLoc.distanceSquared(particleLoc) < 1024 && 
                     player.getLocation().getDirection().dot(particleLoc.toVector().subtract(playerLoc.toVector())) > 0) {
@@ -203,7 +196,6 @@ public class RegionVisualizer {
          */
         private List<Vector> generatePoints(Region region, double density) {
             List<Vector> points = new ArrayList<>();
-            
 
             if (region instanceof com.sparky.libx.region.CuboidRegion) {
                 points.addAll(generateCuboidPoints((com.sparky.libx.region.CuboidRegion) region, density));
@@ -222,16 +214,7 @@ public class RegionVisualizer {
             List<Vector> points = new ArrayList<>();
             Location min = region.getMinPoint();
             Location max = region.getMaxPoint();
-            
 
-
-
-
-            
-
-
-
-            
             return points;
         }
         
@@ -241,12 +224,7 @@ public class RegionVisualizer {
             List<Vector> points = new ArrayList<>();
             Location center = region.getCenter();
             double radius = ((com.sparky.libx.region.SphereRegion) region).getRadius();
-            
 
-
-
-
-            
             return points;
         }
         
@@ -256,27 +234,23 @@ public class RegionVisualizer {
             List<Vector> points = new ArrayList<>();
             double minY = region.getMinY();
             double maxY = region.getMaxY();
-            
 
             List<com.sparky.libx.region.PolygonRegion.Vector2D> vertices = region.getPoints();
             for (int i = 0; i < vertices.size(); i++) {
                 com.sparky.libx.region.PolygonRegion.Vector2D current = vertices.get(i);
                 com.sparky.libx.region.PolygonRegion.Vector2D next = vertices.get((i + 1) % vertices.size());
-                
 
                 generateLine(points, 
                     new Location(region.getWorld(), current.getX(), minY, current.getZ()),
                     new Location(region.getWorld(), next.getX(), minY, next.getZ()),
                     density
                 );
-                
 
                 generateLine(points, 
                     new Location(region.getWorld(), current.getX(), minY, current.getZ()),
                     new Location(region.getWorld(), current.getX(), maxY, current.getZ()),
                     density
                 );
-                
 
                 if (i > 0) {
                     generateLine(points, 
@@ -297,7 +271,6 @@ public class RegionVisualizer {
             for (double d = 0; d < distance; d += density) {
                 points.add(from.toVector().add(direction.clone().multiply(d)));
             }
-            
 
             points.add(to.toVector());
         }
@@ -315,23 +288,22 @@ public class RegionVisualizer {
         private void generateCircle(List<Vector> points, Location center, double radius, int axis, double density) {
             int steps = (int) (2 * Math.PI * radius / density);
 
-            
             for (int i = 0; i < steps; i++) {
                 double angle = 2 * Math.PI * i / steps;
                 double x = 0, y = 0, z = 0;
                 
                 switch (axis) {
-                    case 0: // XY plane
+                    case 0:
                         x = Math.cos(angle) * radius;
                         y = Math.sin(angle) * radius;
                         z = 0;
                         break;
-                    case 1: // XZ plane
+                    case 1:
                         x = Math.cos(angle) * radius;
                         z = Math.sin(angle) * radius;
                         y = 0;
                         break;
-                    case 2: // YZ plane
+                    case 2:
                         y = Math.cos(angle) * radius;
                         z = Math.sin(angle) * radius;
                         x = 0;

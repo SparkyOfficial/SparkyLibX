@@ -1,11 +1,14 @@
 package com.sparky.libx.region;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.serialization.SerializableAs;
-
-import java.util.*;
 
 /**
  * Реализация региона в форме полигона (многоугольника)
@@ -52,19 +55,16 @@ public class PolygonRegion extends Region {
             return false;
         }
         
-
         double y = location.getY();
         if (y < minY || y > maxY) {
             return false;
         }
         
-
         Vector2D point = new Vector2D(location.getX(), location.getZ());
         if (!bounds.contains(point)) {
             return false;
         }
         
-
         return isPointInPolygon(point);
     }
     
@@ -107,7 +107,6 @@ public class PolygonRegion extends Region {
     
     @Override
     public double getVolume() {
-
         return bounds.getArea() * (maxY - minY);
     }
     

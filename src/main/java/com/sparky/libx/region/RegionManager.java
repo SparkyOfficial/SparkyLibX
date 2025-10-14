@@ -75,23 +75,19 @@ public class RegionManager implements Listener {
         Location to = event.getTo();
         Location from = event.getFrom();
         
-
         if (to == null || (to.getX() == from.getX() && to.getY() == from.getY() && to.getZ() == from.getZ())) {
             return;
         }
         
-
         Set<Region> currentRegions = getRegionsAt(to);
         Set<Region> previousRegions = getRegionsAt(from);
         
-
         for (Region region : previousRegions) {
             if (!currentRegions.contains(region)) {
                 handleRegionLeave(player, region, to);
             }
         }
         
-
         for (Region region : currentRegions) {
             if (!previousRegions.contains(region)) {
                 handleRegionEnter(player, region, to);
@@ -100,24 +96,20 @@ public class RegionManager implements Listener {
     }
     
     private void handleRegionEnter(Player player, Region region, Location location) {
-
         playerRegions.computeIfAbsent(player.getUniqueId(), k -> new HashSet<>())
                     .add(region.getName().toLowerCase());
         
-
         RegionEvent event = new RegionEvent(player, location, region.getName(), 
                                           RegionEvent.RegionAction.ENTER);
         Bukkit.getPluginManager().callEvent(event);
     }
     
     private void handleRegionLeave(Player player, Region region, Location location) {
-
         playerRegions.computeIfPresent(player.getUniqueId(), (k, v) -> {
             v.remove(region.getName().toLowerCase());
             return v.isEmpty() ? null : v;
         });
         
-
         RegionEvent event = new RegionEvent(player, location, region.getName(), 
                                           RegionEvent.RegionAction.LEAVE);
         Bukkit.getPluginManager().callEvent(event);

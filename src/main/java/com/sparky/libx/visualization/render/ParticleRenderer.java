@@ -1,16 +1,24 @@
 package com.sparky.libx.visualization.render;
 
-import com.sparky.libx.region.Region;
-import com.sparky.libx.region.CuboidRegion;
-import com.sparky.libx.region.SphereRegion;
-import com.sparky.libx.region.PolygonRegion;
-import org.bukkit.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.sparky.libx.region.CuboidRegion;
+import com.sparky.libx.region.PolygonRegion;
+import com.sparky.libx.region.Region;
+import com.sparky.libx.region.SphereRegion;
 
 /**
  * Рендерер, отображающий границы регионов с помощью частиц
@@ -35,14 +43,11 @@ public class ParticleRenderer implements RegionRenderer {
     
     @Override
     public void render(Player player, Region region) {
-
         clear(player);
-        
 
         RenderTask task = new RenderTask(player, region);
         task.runTaskTimer(Bukkit.getPluginManager().getPlugin("SparkyLibX"), 0, 1);
         activeRenders.put(player.getUniqueId(), task);
-        
 
         if (duration > 0) {
             Bukkit.getScheduler().runTaskLater(
@@ -95,12 +100,10 @@ public class ParticleRenderer implements RegionRenderer {
             
             World world = player.getWorld();
             Location playerLoc = player.getLocation();
-            
 
             if (!isVisibleFrom(region, playerLoc)) {
                 return;
             }
-            
 
             for (int i = 0; i < particlesPerTick && !points.isEmpty(); i++) {
                 if (currentIndex >= points.size()) {
@@ -109,7 +112,6 @@ public class ParticleRenderer implements RegionRenderer {
                 
                 Vector point = points.get(currentIndex++);
                 Location particleLoc = new Location(world, point.getX(), point.getY(), point.getZ());
-                
 
                 if (isInView(player, particleLoc)) {
                     player.spawnParticle(
@@ -142,13 +144,6 @@ public class ParticleRenderer implements RegionRenderer {
             Location maxLoc = region.getMaxPoint();
             Vector min = minLoc.toVector();
             Vector max = maxLoc.toVector();
-            
-
-
-
-
-
-            
 
             generateLine(points, min, new Vector(min.getX(), max.getY(), min.getZ()));
             generateLine(points, new Vector(max.getX(), min.getY(), min.getZ()), 
@@ -164,11 +159,8 @@ public class ParticleRenderer implements RegionRenderer {
             List<Vector> points = new ArrayList<>();
             double radius = region.getRadius();
             Location center = region.getCenter();
-            
 
             int pointsPerCircle = (int) (2 * Math.PI * radius / density);
-
-            
 
             for (double y = -radius; y <= radius; y += density) {
                 double currentRadius = Math.sqrt(radius * radius - y * y);

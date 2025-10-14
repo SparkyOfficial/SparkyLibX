@@ -1,14 +1,13 @@
 package com.sparky.libx.math;
 
 /**
- * Клас для представлення кватерніонів для 3D обертань
- * @author Андрій Будильников
+ * Кватернион для 3D вращений
  */
 public class Quaternion {
-    private double w, x, y, z;
+    private final double w, x, y, z;
     
     /**
-     * Створює кватерніон з вказаних компонентів
+     * Создает новый кватернион
      */
     public Quaternion(double w, double x, double y, double z) {
         this.w = w;
@@ -18,231 +17,189 @@ public class Quaternion {
     }
     
     /**
-     * Створює одиничний кватерніон
+     * Создает единичный кватернион
      */
-    public Quaternion() {
-        this(1, 0, 0, 0);
+    public static Quaternion identity() {
+        return new Quaternion(1, 0, 0, 0);
     }
     
     /**
-     * Створює кватерніон з вектора обертання
+     * Создает кватернион из угла поворота и оси
      */
-    public Quaternion(Vector3D axis, double angle) {
+    public static Quaternion fromAxisAngle(Vector3D axis, double angle) {
         double halfAngle = angle / 2.0;
-        double sin = Math.sin(halfAngle);
-        double cos = Math.cos(halfAngle);
+        double sinHalfAngle = Math.sin(halfAngle);
+        double cosHalfAngle = Math.cos(halfAngle);
         
-        this.w = cos;
-        this.x = axis.getX() * sin;
-        this.y = axis.getY() * sin;
-        this.z = axis.getZ() * sin;
+        return new Quaternion(
+            cosHalfAngle,
+            axis.getX() * sinHalfAngle,
+            axis.getY() * sinHalfAngle,
+            axis.getZ() * sinHalfAngle
+        );
     }
     
     /**
-     * Отримує компонент W
+     * Создает кватернион из углов Эйлера
      */
-    public double getW() {
-        return w;
+    public static Quaternion fromEulerAngles(double roll, double pitch, double yaw) {
+        double cr = Math.cos(roll * 0.5);
+        double sr = Math.sin(roll * 0.5);
+        double cp = Math.cos(pitch * 0.5);
+        double sp = Math.sin(pitch * 0.5);
+        double cy = Math.cos(yaw * 0.5);
+        double sy = Math.sin(yaw * 0.5);
+        
+        double w = cr * cp * cy + sr * sp * sy;
+        double x = sr * cp * cy - cr * sp * sy;
+        double y = cr * sp * cy + sr * cp * sy;
+        double z = cr * cp * sy - sr * sp * cy;
+        
+        return new Quaternion(w, x, y, z);
     }
     
     /**
-     * Отримує компонент X
+     * Складывает два кватерниона
      */
-    public double getX() {
-        return x;
+    public Quaternion add(Quaternion other) {
+        return new Quaternion(
+            this.w + other.w,
+            this.x + other.x,
+            this.y + other.y,
+            this.z + other.z
+        );
     }
     
     /**
-     * Отримує компонент Y
+     * Вычитает один кватернион из другого
      */
-    public double getY() {
-        return y;
+    public Quaternion subtract(Quaternion other) {
+        return new Quaternion(
+            this.w - other.w,
+            this.x - other.x,
+            this.y - other.y,
+            this.z - other.z
+        );
     }
     
     /**
-     * Отримує компонент Z
+     * Умножает два кватерниона
      */
-    public double getZ() {
-        return z;
+    public Quaternion multiply(Quaternion other) {
+        return new Quaternion(
+            this.w * other.w - this.x * other.x - this.y * other.y - this.z * other.z,
+            this.w * other.x + this.x * other.w + this.y * other.z - this.z * other.y,
+            this.w * other.y - this.x * other.z + this.y * other.w + this.z * other.x,
+            this.w * other.z + this.x * other.y - this.y * other.x + this.z * other.w
+        );
     }
     
     /**
-     * Обчислює довжину кватерніона
+     * Умножает кватернион на скаляр
      */
-    public double length() {
-        return Math.sqrt(w * w + x * x + y * y + z * z);
+    public Quaternion multiply(double scalar) {
+        return new Quaternion(
+            this.w * scalar,
+            this.x * scalar,
+            this.y * scalar,
+            this.z * scalar
+        );
     }
     
     /**
-     * Нормалізує кватерніон
-     */
-    public Quaternion normalize() {
-        double length = length();
-        if (length == 0) return new Quaternion();
-        return new Quaternion(w / length, x / length, y / length, z / length);
-    }
-    
-    /**
-     * Обчислює спряжений кватерніон
+     * Вычисляет сопряженный кватернион
      */
     public Quaternion conjugate() {
         return new Quaternion(w, -x, -y, -z);
     }
     
     /**
-     * Обчислює обернений кватерніон
+     * Вычисляет норму кватерниона
+     */
+    public double norm() {
+        return Math.sqrt(w * w + x * x + y * y + z * z);
+    }
+    
+    /**
+     * Нормализует кватернион
+     */
+    public Quaternion normalize() {
+        double norm = norm();
+        if (norm == 0) {
+            return identity();
+        }
+        return multiply(1.0 / norm);
+    }
+    
+    /**
+     * Вычисляет обратный кватернион
      */
     public Quaternion inverse() {
-        double lengthSquared = w * w + x * x + y * y + z * z;
-        if (lengthSquared == 0) return new Quaternion();
-        return conjugate().multiply(1.0 / lengthSquared);
+        double normSquared = w * w + x * x + y * y + z * z;
+        if (normSquared == 0) {
+            throw new ArithmeticException("Невозможно вычислить обратный кватернион для нулевого кватерниона");
+        }
+        return conjugate().multiply(1.0 / normSquared);
     }
     
     /**
-     * Множить кватерніон на скаляр
-     */
-    public Quaternion multiply(double scalar) {
-        return new Quaternion(w * scalar, x * scalar, y * scalar, z * scalar);
-    }
-    
-    /**
-     * Множить кватерніон на інший кватерніон
-     */
-    public Quaternion multiply(Quaternion other) {
-        return new Quaternion(
-            w * other.w - x * other.x - y * other.y - z * other.z,
-            w * other.x + x * other.w + y * other.z - z * other.y,
-            w * other.y - x * other.z + y * other.w + z * other.x,
-            w * other.z + x * other.y - y * other.x + z * other.w
-        );
-    }
-    
-    /**
-     * Додає кватерніон до іншого кватерніона
-     */
-    public Quaternion add(Quaternion other) {
-        return new Quaternion(w + other.w, x + other.x, y + other.y, z + other.z);
-    }
-    
-    /**
-     * Віднімає інший кватерніон від цього
-     */
-    public Quaternion subtract(Quaternion other) {
-        return new Quaternion(w - other.w, x - other.x, y - other.y, z - other.z);
-    }
-    
-    /**
-     * Інтерполює між двома кватерніонами (SLERP)
+     * Интерполирует между двумя кватернионами (SLERP)
      */
     public Quaternion slerp(Quaternion other, double t) {
-        double dot = dot(other);
+        double dot = this.w * other.w + this.x * other.x + this.y * other.y + this.z * other.z;
         
-        // Якщо кватерніони протилежні, обертаємо один з них
-        if (dot < 0.0) {
+        if (dot < 0) {
             other = other.multiply(-1);
             dot = -dot;
         }
         
-        // Якщо кватерніони дуже близькі, використовуємо лінійну інтерполяцію
         if (dot > 0.9995) {
-            return nlerp(other, t);
+            return this.add(other.subtract(this).multiply(t)).normalize();
         }
         
-        double theta = Math.acos(dot);
+        double theta0 = Math.acos(dot);
+        double theta = theta0 * t;
         double sinTheta = Math.sin(theta);
+        double sinTheta0 = Math.sin(theta0);
         
-        double scale0 = Math.sin((1.0 - t) * theta) / sinTheta;
-        double scale1 = Math.sin(t * theta) / sinTheta;
+        double s0 = Math.cos(theta) - dot * sinTheta / sinTheta0;
+        double s1 = sinTheta / sinTheta0;
         
-        return new Quaternion(
-            scale0 * w + scale1 * other.w,
-            scale0 * x + scale1 * other.x,
-            scale0 * y + scale1 * other.y,
-            scale0 * z + scale1 * other.z
-        );
+        return this.multiply(s0).add(other.multiply(s1)).normalize();
     }
     
     /**
-     * Нормалізована лінійна інтерполяція між двома кватерніонами
+     * Преобразует кватернион в углы Эйлера
      */
-    public Quaternion nlerp(Quaternion other, double t) {
-        double dot = dot(other);
+    public double[] toEulerAngles() {
+        double[] angles = new double[3];
         
-        double scale0 = 1.0 - t;
-        double scale1 = (dot >= 0) ? t : -t;
+        double sinr_cosp = 2 * (w * x + y * z);
+        double cosr_cosp = 1 - 2 * (x * x + y * y);
+        angles[0] = Math.atan2(sinr_cosp, cosr_cosp);
         
-        Quaternion result = new Quaternion(
-            scale0 * w + scale1 * other.w,
-            scale0 * x + scale1 * other.x,
-            scale0 * y + scale1 * other.y,
-            scale0 * z + scale1 * other.z
-        );
+        double sinp = 2 * (w * y - z * x);
+        if (Math.abs(sinp) >= 1) {
+            angles[1] = Math.copySign(Math.PI / 2, sinp);
+        } else {
+            angles[1] = Math.asin(sinp);
+        }
         
-        return result.normalize();
-    }
-    
-    /**
-     * Обчислює скалярний добуток з іншим кватерніоном
-     */
-    public double dot(Quaternion other) {
-        return w * other.w + x * other.x + y * other.y + z * other.z;
-    }
-    
-    /**
-     * Поворотує вектор за допомогою кватерніона
-     */
-    public Vector3D rotate(Vector3D vector) {
-        Quaternion vectorQuat = new Quaternion(0, vector.getX(), vector.getY(), vector.getZ());
-        Quaternion result = multiply(vectorQuat).multiply(inverse());
-        return new Vector3D(result.x, result.y, result.z);
-    }
-    
-    /**
-     * Створює кватерніон обертання навколо осі X
-     */
-    public static Quaternion rotationX(double angle) {
-        double halfAngle = angle / 2.0;
-        return new Quaternion(Math.cos(halfAngle), Math.sin(halfAngle), 0, 0);
-    }
-    
-    /**
-     * Створює кватерніон обертання навколо осі Y
-     */
-    public static Quaternion rotationY(double angle) {
-        double halfAngle = angle / 2.0;
-        return new Quaternion(Math.cos(halfAngle), 0, Math.sin(halfAngle), 0);
-    }
-    
-    /**
-     * Створює кватерніон обертання навколо осі Z
-     */
-    public static Quaternion rotationZ(double angle) {
-        double halfAngle = angle / 2.0;
-        return new Quaternion(Math.cos(halfAngle), 0, 0, Math.sin(halfAngle));
-    }
-    
-    /**
-     * Створює кватерніон з кутів Ейлера (в радіанах)
-     */
-    public static Quaternion fromEulerAngles(double yaw, double pitch, double roll) {
-        double cy = Math.cos(yaw * 0.5);
-        double sy = Math.sin(yaw * 0.5);
-        double cp = Math.cos(pitch * 0.5);
-        double sp = Math.sin(pitch * 0.5);
-        double cr = Math.cos(roll * 0.5);
-        double sr = Math.sin(roll * 0.5);
+        double siny_cosp = 2 * (w * z + x * y);
+        double cosy_cosp = 1 - 2 * (y * y + z * z);
+        angles[2] = Math.atan2(siny_cosp, cosy_cosp);
         
-        return new Quaternion(
-            cr * cp * cy + sr * sp * sy,
-            sr * cp * cy - cr * sp * sy,
-            cr * sp * cy + sr * cp * sy,
-            cr * cp * sy - sr * sp * cy
-        );
+        return angles;
     }
+    
+    public double getW() { return w; }
+    public double getX() { return x; }
+    public double getY() { return y; }
+    public double getZ() { return z; }
     
     @Override
     public String toString() {
-        return String.format("Quaternion{w=%.3f, x=%.3f, y=%.3f, z=%.3f}", w, x, y, z);
+        return String.format("Quaternion(%.3f, %.3f, %.3f, %.3f)", w, x, y, z);
     }
     
     @Override

@@ -29,7 +29,6 @@ public class RendererFactory {
      * Создает рендерер частиц
      */
     public static ParticleRenderer createParticleRenderer(ConfigurationSection config) {
-
         Particle particle = Particle.REDSTONE;
         Object particleData = new Particle.DustOptions(
             Color.fromRGB(config.getInt("color.red", 255), 
@@ -37,19 +36,16 @@ public class RendererFactory {
                          config.getInt("color.blue", 0)),
             (float) config.getDouble("size", 1.0)
         );
-        
 
         try {
             particle = Particle.valueOf(config.getString("particle", "REDSTONE").toUpperCase());
         } catch (IllegalArgumentException e) {
-
         }
         
         double density = config.getDouble("density", 0.2);
         int particlesPerTick = config.getInt("particles-per-tick", 10);
         int duration = config.getInt("duration", 0);
 
-        
         return new ParticleRenderer(particle, particleData, density, particlesPerTick, duration);
     }
     
@@ -57,12 +53,10 @@ public class RendererFactory {
      * Создает блочный рендерер
      */
     public static BlockRenderer createBlockRenderer(ConfigurationSection config) {
-
         Material material = Material.matchMaterial(config.getString("material", "GLASS"));
         if (material == null || !material.isBlock()) {
             material = Material.GLASS;
         }
-        
 
         boolean wireframe = config.getBoolean("wireframe", false);
         int duration = config.getInt("duration", 0);

@@ -6,12 +6,10 @@ import java.util.List;
 import org.bukkit.util.Vector;
 
 /**
- * Расширенные геометрические операции для работы с фигурами в 3D пространстве
- * author: Андрій Будильников
+ * Расширенные геометрические операции и генерация 3D форм
+ * @author Андрій Будильников
  */
-public final class AdvancedGeometry {
-    
-    private AdvancedGeometry() {}
+public class AdvancedGeometry {
     
     /**
      * Создает точки по спирали
@@ -39,12 +37,12 @@ public final class AdvancedGeometry {
     }
     
     /**
-     * Создает точки по тору (бублику)
+     * Создает точки по тору
      * @param center центр тора
-     * @param majorRadius большой радиус (до центра трубки)
+     * @param majorRadius большой радиус (расстояние от центра до центра трубки)
      * @param minorRadius малый радиус (радиус трубки)
-     * @param majorPoints количество точек по большому кругу
-     * @param minorPoints количество точек по малому кругу
+     * @param majorPoints количество точек по большой окружности
+     * @param minorPoints количество точек по малой окружности
      * @return список точек тора
      */
     public static List<Vector> createTorus(Vector center, double majorRadius, double minorRadius, 
@@ -75,17 +73,15 @@ public final class AdvancedGeometry {
      * @param baseCenter центр основания конуса
      * @param baseRadius радиус основания
      * @param height высота конуса
-     * @param points количество точек
+     * @param points количество точек в основании
      * @return список точек конуса
      */
     public static List<Vector> createCone(Vector baseCenter, double baseRadius, double height, int points) {
         List<Vector> conePoints = new ArrayList<>();
         
-        // Точка вершины
         Vector apex = new Vector(baseCenter.getX(), baseCenter.getY() + height, baseCenter.getZ());
         conePoints.add(apex);
         
-        // Точки основания
         double angleStep = 2 * Math.PI / points;
         for (int i = 0; i < points; i++) {
             double angle = i * angleStep;
@@ -107,11 +103,9 @@ public final class AdvancedGeometry {
     public static List<Vector> createPyramid(Vector baseCenter, double baseSize, double height) {
         List<Vector> pyramidPoints = new ArrayList<>();
         
-        // Точка вершины
         Vector apex = new Vector(baseCenter.getX(), baseCenter.getY() + height, baseCenter.getZ());
         pyramidPoints.add(apex);
         
-        // Точки основания (квадрат)
         double halfSize = baseSize / 2;
         pyramidPoints.add(new Vector(baseCenter.getX() - halfSize, baseCenter.getY(), baseCenter.getZ() - halfSize));
         pyramidPoints.add(new Vector(baseCenter.getX() + halfSize, baseCenter.getY(), baseCenter.getZ() - halfSize));
@@ -133,7 +127,6 @@ public final class AdvancedGeometry {
         List<Vector> cylinderPoints = new ArrayList<>();
         double angleStep = 2 * Math.PI / points;
         
-        // Точки нижнего основания
         for (int i = 0; i < points; i++) {
             double angle = i * angleStep;
             double x = baseCenter.getX() + radius * Math.cos(angle);
@@ -141,7 +134,6 @@ public final class AdvancedGeometry {
             cylinderPoints.add(new Vector(x, baseCenter.getY(), z));
         }
         
-        // Точки верхнего основания
         for (int i = 0; i < points; i++) {
             double angle = i * angleStep;
             double x = baseCenter.getX() + radius * Math.cos(angle);
@@ -257,7 +249,6 @@ public final class AdvancedGeometry {
                     iterations++;
                 }
                 
-                // Если точка принадлежит множеству Мандельброта
                 if (iterations == maxIterations) {
                     fractalPoints.add(new Vector(cx, 0, cz));
                 }

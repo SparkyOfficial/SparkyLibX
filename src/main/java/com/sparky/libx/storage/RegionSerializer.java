@@ -1,9 +1,8 @@
 package com.sparky.libx.storage;
 
-import com.sparky.libx.region.Region;
-import org.bukkit.configuration.serialization.ConfigurationSerialization;
-
 import java.util.Map;
+
+import com.sparky.libx.region.Region;
 
 /**
  * Сериализатор регионов для сохранения в базе данных
@@ -19,7 +18,6 @@ public class RegionSerializer {
     public static String serialize(Region region) {
         Map<String, Object> data = region.serialize();
 
-
         return data.toString();
     }
     
@@ -29,8 +27,6 @@ public class RegionSerializer {
      * @return десериализованный регион
      */
     public static Region deserialize(String data) {
-
-
         return null;
     }
 }

@@ -1,12 +1,16 @@
 package com.sparky.libx.visualization;
 
-import com.sparky.libx.region.Region;
-import com.sparky.libx.visualization.render.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.sparky.libx.region.Region;
+import com.sparky.libx.visualization.render.RegionRenderer;
+import com.sparky.libx.visualization.render.RendererFactory;
 
 /**
  * Менеджер визуализации регионов
@@ -19,10 +23,8 @@ public class RegionVisualizationManager {
     
     public RegionVisualizationManager(Plugin plugin) {
         this.plugin = plugin;
-        
 
         this.defaultRenderer = RendererFactory.createDefaultRegionRenderer();
-        
 
         registerRenderer("default", defaultRenderer);
         registerRenderer("selection", RendererFactory.createDefaultSelectionRenderer());
@@ -63,13 +65,10 @@ public class RegionVisualizationManager {
      * Визуализирует регион для игрока с использованием указанного рендерера
      */
     public void visualize(Player player, Region region, RegionRenderer renderer) {
-
         stopVisualization(player);
-        
 
         VisualizedRegion visualization = new VisualizedRegion(region, renderer);
         visualizedRegions.put(player.getUniqueId(), visualization);
-        
 
         renderer.render(player, region);
     }

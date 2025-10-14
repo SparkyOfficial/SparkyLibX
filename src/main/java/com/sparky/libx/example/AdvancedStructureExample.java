@@ -24,7 +24,6 @@ public class AdvancedStructureExample extends JavaPlugin implements CommandExecu
         getLogger().info("AdvancedStructureExample plugin включен!");
         getLogger().info("Используйте /generate <structure> для создания структур");
         
-        // Регистрируем команду
         this.getCommand("generate").setExecutor(this);
     }
     

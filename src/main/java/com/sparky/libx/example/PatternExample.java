@@ -24,15 +24,14 @@ public class PatternExample extends JavaPlugin {
         Location corner1 = new Location(world, 0, 64, 0);
         Location corner2 = new Location(world, 50, 100, 50);
         
-        // Создаем ландшафт с использованием фрактального шума Перлина
         List<org.bukkit.block.Block> terrainBlocks = BlockUtils.createPerlinTerrain(
             corner1, corner2, 
-            Material.STONE,  // Основной материал
-            6,               // Количество октав
-            0.5,             // Persistence (степень сохранения амплитуды)
-            0.02,            // Масштаб шума
-            20,              // Множитель высоты
-            70               // Уровень моря
+            Material.STONE,
+            6,
+            0.5,
+            0.02,
+            20,
+            70
         );
         
         getLogger().info("Создан ландшафт из " + terrainBlocks.size() + " блоков");
@@ -45,13 +44,12 @@ public class PatternExample extends JavaPlugin {
     public void createNoisySphere(World world) {
         Location center = new Location(world, 25, 80, 25);
         
-        // Создаем сферу с шумом Перлина для создания органической формы
         List<org.bukkit.block.Block> sphereBlocks = BlockUtils.createNoisySphere(
             center, 
-            10.0,            // Радиус сферы
-            Material.GLASS,  // Материал
-            0.1,             // Масштаб шума (меньше = более плавные переходы)
-            0.0              // Пороговое значение (больше = меньше блоков)
+            10.0,
+            Material.GLASS,
+            0.1,
+            0.0
         );
         
         getLogger().info("Создана шумовая сфера из " + sphereBlocks.size() + " блоков");
@@ -73,11 +71,10 @@ public class PatternExample extends JavaPlugin {
             Material.MOSSY_COBBLESTONE
         };
         
-        // Создаем паттерн Вороного
         List<org.bukkit.block.Block> voronoiBlocks = BlockUtils.createVoronoiPattern(
             corner1, corner2, 
-            materials,  // Массив материалов для использования
-            2.0         // Масштаб паттерна
+            materials,
+            2.0
         );
         
         getLogger().info("Создан паттерн Вороного из " + voronoiBlocks.size() + " блоков");
@@ -90,13 +87,12 @@ public class PatternExample extends JavaPlugin {
     public void createSpiralPattern(World world) {
         Location center = new Location(world, 120, 70, 20);
         
-        // Создаем спиральный паттерн
         List<org.bukkit.block.Block> spiralBlocks = BlockUtils.createSpiralPattern(
             center, 
-            8.0,              // Радиус спирали
-            20.0,             // Высота спирали
-            5.0,              // Количество оборотов
-            Material.GOLD_BLOCK // Материал
+            8.0,
+            20.0,
+            5.0,
+            Material.GOLD_BLOCK
         );
         
         getLogger().info("Создан спиральный паттерн из " + spiralBlocks.size() + " блоков");
@@ -110,12 +106,11 @@ public class PatternExample extends JavaPlugin {
         Location corner1 = new Location(world, 0, 90, 60);
         Location corner2 = new Location(world, 20, 110, 80);
         
-        // Создаем трехмерную шахматную доску
         List<org.bukkit.block.Block> checkerboardBlocks = BlockUtils.create3DCheckerboard(
             corner1, corner2,
-            Material.BLACK_CONCRETE,  // Первый материал
-            Material.WHITE_CONCRETE,  // Второй материал
-            2                         // Размер клетки
+            Material.BLACK_CONCRETE,
+            Material.WHITE_CONCRETE,
+            2
         );
         
         getLogger().info("Создана 3D шахматная доска из " + checkerboardBlocks.size() + " блоков");
@@ -127,30 +122,26 @@ public class PatternExample extends JavaPlugin {
     public void demonstrateNoiseGenerator() {
         getLogger().info("=== Демонстрация генератора шума ===");
         
-        // Шум Перлина
-        double perlin1 = NoiseGenerator.perlinNoise(0.5, 0.5, 0.5);
-        double perlin2 = NoiseGenerator.perlinNoise(1.0, 1.0, 1.0);
+        NoiseGenerator noiseGen = new NoiseGenerator(System.currentTimeMillis());
+        
+        double perlin1 = noiseGen.perlinNoise(0.5, 0.5, 0.5);
+        double perlin2 = noiseGen.perlinNoise(1.0, 1.0, 1.0);
         getLogger().info("Шум Перлина (0.5,0.5,0.5): " + perlin1);
         getLogger().info("Шум Перлина (1.0,1.0,1.0): " + perlin2);
         
-        // Фрактальный шум (FBM)
-        double fractal = NoiseGenerator.fractalNoise(0.5, 0.5, 0.5, 4, 0.5, 0.01);
+        double fractal = noiseGen.fractalBrownianMotion(0.5, 0.5, 4, 0.5, 0.01);
         getLogger().info("Фрактальный шум: " + fractal);
         
-        // Шум Вороного
-        double voronoi = NoiseGenerator.voronoiNoise(0.5, 0.5, 0.5, 1.0);
+        double voronoi = noiseGen.voronoiNoise(0.5, 0.5, 10);
         getLogger().info("Шум Вороного: " + voronoi);
         
-        // Волновой шум
-        double wave = NoiseGenerator.waveNoise(0.5, 0.5, 0.5, 2.0, 1.0);
+        double wave = noiseGen.waveNoise(0.5, 0.5, 2.0, 1.0);
         getLogger().info("Волновой шум: " + wave);
         
-        // Спиральный шум
-        double spiral = NoiseGenerator.spiralNoise(0.5, 0.5, 3.0, 2.0);
+        double spiral = noiseGen.spiralNoise(0.5, 0.5, 3);
         getLogger().info("Спиральный шум: " + spiral);
         
-        // Шахматная доска
-        int checker = NoiseGenerator.checkerboard(5, 10, 3);
+        double checker = noiseGen.checkerboard(5, 10, 3);
         getLogger().info("Шахматная доска (5,10,3): " + checker);
     }
     
@@ -160,7 +151,6 @@ public class PatternExample extends JavaPlugin {
         getLogger().info("Этот пример демонстрирует возможности библиотеки SparkyLibX");
         getLogger().info("для создания сложных паттернов и структур в Minecraft.");
         
-        // Демонстрируем использование генератора шума
         demonstrateNoiseGenerator();
         
         getLogger().info("Для использования методов работы с блоками необходим запущенный мир Minecraft.");

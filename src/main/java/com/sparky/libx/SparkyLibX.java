@@ -9,10 +9,11 @@ import com.sparky.libx.storage.DatabaseManager;
 import com.sparky.libx.visualization.RegionVisualizationManager;
 
 /**
- * Главный класс плагина SparkyLibX
+ * Основной класс библиотеки SparkyLibX
  * @author Андрій Будильников
  */
 public class SparkyLibX extends JavaPlugin {
+    
     private static SparkyLibX instance;
     private DatabaseManager databaseManager;
     private RegionManager regionManager;
@@ -22,16 +23,14 @@ public class SparkyLibX extends JavaPlugin {
     public void onEnable() {
         instance = this;
         
-
+        if (!getDataFolder().exists()) {
+            getDataFolder().mkdirs();
+        }
+        
         initializeDatabase();
-        
-
         this.regionManager = new RegionManager(this);
-        
-
         this.visualizationManager = new RegionVisualizationManager(this);
         
-
         registerCommands();
         registerListeners();
         
@@ -40,12 +39,6 @@ public class SparkyLibX extends JavaPlugin {
     
     @Override
     public void onDisable() {
-
-        if (visualizationManager != null) {
-            visualizationManager.stopAll();
-        }
-        
-
         if (databaseManager != null) {
             databaseManager.close();
         }
@@ -55,7 +48,6 @@ public class SparkyLibX extends JavaPlugin {
     
     private void initializeDatabase() {
         try {
-            // HikariCP DataSource
             com.zaxxer.hikari.HikariConfig config = new com.zaxxer.hikari.HikariConfig();
             config.setJdbcUrl("jdbc:sqlite:" + getDataFolder().getAbsolutePath() + "/sparkylibx.db");
             config.setMaximumPoolSize(10);

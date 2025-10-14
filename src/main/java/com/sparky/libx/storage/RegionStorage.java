@@ -1,23 +1,26 @@
 package com.sparky.libx.storage;
 
-import com.sparky.libx.region.Region;
-import com.sparky.libx.region.RegionManager;
-import com.sparky.libx.storage.RegionSerializer;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import org.bukkit.plugin.Plugin;
-
-import javax.sql.DataSource;
 import java.io.File;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.sql.DataSource;
+
+import org.bukkit.plugin.Plugin;
+
+import com.sparky.libx.region.Region;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * Система хранения регионов в базе данных
@@ -43,11 +46,9 @@ public class RegionStorage {
         config.setLeakDetectionThreshold(60000);
         
         this.dataSource = new HikariDataSource(config);
-        
 
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
-            
 
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS regions (
@@ -61,7 +62,6 @@ public class RegionStorage {
                     UNIQUE (name, world)
                 )
             """);
-            
 
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS region_permissions (
@@ -74,7 +74,6 @@ public class RegionStorage {
                     FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE CASCADE
                 )
             """);
-            
 
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_regions_world ON regions(world)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_region_permissions_region ON region_permissions(region_id)");
@@ -214,9 +213,8 @@ public class RegionStorage {
                         return rs.getBoolean("value");
                     }
                 }
-                
 
-                return getDefaultPermission(permission);
+                return false;
                 
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to check permission", e);
@@ -274,8 +272,6 @@ public class RegionStorage {
     }
     
     private boolean getDefaultPermission(String permission) {
-
-
         return false;
     }
 }

@@ -34,25 +34,20 @@ public class StructureGenerator {
         int y = location.getBlockY();
         int z = location.getBlockZ();
         
-        // Создаем ствол
         for (int i = 0; i < trunkHeight; i++) {
             Block block = world.getBlockAt(x, y + i, z);
             block.setType(trunkMaterial);
             blocks.add(block);
         }
         
-        // Создаем листву
         int leafHeight = y + trunkHeight;
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 for (int dy = -1; dy <= 2; dy++) {
-                    // Создаем сферическую форму листвы с некоторыми пропусками
                     double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
                     if (distance <= 2.5) {
-                        // Добавляем случайные пропуски для более естественного вида
                         if (Math.random() > 0.3) {
                             Block block = world.getBlockAt(x + dx, leafHeight + dy, z + dz);
-                            // Не заменяем ствол
                             if (block.getType() != trunkMaterial) {
                                 block.setType(leavesMaterial);
                                 blocks.add(block);
@@ -85,14 +80,12 @@ public class StructureGenerator {
         
         int radiusCeil = (int) Math.ceil(radius);
         
-        // Создаем основную пустоту пещеры
         for (int x = -radiusCeil; x <= radiusCeil; x++) {
             for (int y = -radiusCeil; y <= radiusCeil; y++) {
                 for (int z = -radiusCeil; z <= radiusCeil; z++) {
                     double distance = Math.sqrt(x * x + y * y + z * z);
                     if (distance <= radius) {
                         Block block = world.getBlockAt(centerX + x, centerY + y, centerZ + z);
-                        // Очищаем пространство
                         if (block.getType() != Material.AIR) {
                             block.setType(Material.AIR);
                             blocks.add(block);
@@ -102,15 +95,14 @@ public class StructureGenerator {
             }
         }
         
-        // Добавляем кристаллы на стенках
+        NoiseGenerator noiseGen = new NoiseGenerator(System.currentTimeMillis());
+        
         for (int x = -radiusCeil; x <= radiusCeil; x++) {
             for (int y = -radiusCeil; y <= radiusCeil; y++) {
                 for (int z = -radiusCeil; z <= radiusCeil; z++) {
                     double distance = Math.sqrt(x * x + y * y + z * z);
-                    // Ближе к краю пещеры
                     if (distance >= radius - 1 && distance <= radius) {
-                        // Используем шум для определения, где размещать кристаллы
-                        double noise = NoiseGenerator.perlinNoise(
+                        double noise = noiseGen.perlinNoise(
                             (centerX + x) * 0.2,
                             (centerY + y) * 0.2,
                             (centerZ + z) * 0.2
@@ -128,7 +120,6 @@ public class StructureGenerator {
             }
         }
         
-        // Добавляем основание пещеры
         for (int x = -radiusCeil; x <= radiusCeil; x++) {
             for (int z = -radiusCeil; z <= radiusCeil; z++) {
                 double distance = Math.sqrt(x * x + z * z);
@@ -168,25 +159,20 @@ public class StructureGenerator {
         int width = (maxX - minX) / pathWidth;
         int depth = (maxZ - minZ) / pathWidth;
         
-        // Создаем базовую структуру
         boolean[][] maze = new boolean[width][depth];
         
-        // Инициализируем лабиринт (все стены)
         for (int x = 0; x < width; x++) {
             for (int z = 0; z < depth; z++) {
-                maze[x][z] = true; // true означает стену
+                maze[x][z] = true;
             }
         }
         
-        // Генерируем лабиринт алгоритмом поиска в глубину
         generateMazeRecursive(maze, 1, 1);
         
-        // Создаем физические блоки
         int startY = corner1.getBlockY();
         for (int x = 0; x < width; x++) {
             for (int z = 0; z < depth; z++) {
-                if (maze[x][z]) { // Если это стена
-                    // Создаем стену высотой 3 блока
+                if (maze[x][z]) {
                     for (int y = 0; y < 3; y++) {
                         for (int dx = 0; dx < pathWidth; dx++) {
                             for (int dz = 0; dz < pathWidth; dz++) {
@@ -211,9 +197,8 @@ public class StructureGenerator {
      * Рекурсивный алгоритм генерации лабиринта
      */
     private static void generateMazeRecursive(boolean[][] maze, int x, int z) {
-        maze[x][z] = false; // Делаем текущую ячейку проходом
+        maze[x][z] = false;
         
-        // Определяем направления в случайном порядке
         int[] directions = {0, 1, 2, 3};
         shuffleArray(directions);
         
@@ -221,19 +206,17 @@ public class StructureGenerator {
             int dx = 0, dz = 0;
             
             switch (directions[i]) {
-                case 0: dx = 0; dz = -2; break; // Север
-                case 1: dx = 2; dz = 0; break;  // Восток
-                case 2: dx = 0; dz = 2; break;  // Юг
-                case 3: dx = -2; dz = 0; break; // Запад
+                case 0: dx = 0; dz = -2; break;
+                case 1: dx = 2; dz = 0; break;
+                case 2: dx = 0; dz = 2; break;
+                case 3: dx = -2; dz = 0; break;
             }
             
             int nx = x + dx;
             int nz = z + dz;
             
-            // Проверяем границы
             if (nx > 0 && nx < maze.length - 1 && nz > 0 && nz < maze[0].length - 1) {
-                if (maze[nx][nz]) { // Если следующая ячейка еще стена
-                    // Делаем проход между текущей и следующей ячейкой
+                if (maze[nx][nz]) {
                     maze[x + dx/2][z + dz/2] = false;
                     generateMazeRecursive(maze, nx, nz);
                 }
@@ -272,7 +255,6 @@ public class StructureGenerator {
         int centerY = center.getBlockY();
         int centerZ = center.getBlockZ();
         
-        // Создаем основание башни
         for (int x = -((int)radius); x <= (int)radius; x++) {
             for (int z = -((int)radius); z <= (int)radius; z++) {
                 double distance = Math.sqrt(x * x + z * z);
@@ -284,7 +266,6 @@ public class StructureGenerator {
             }
         }
         
-        // Создаем спираль
         for (int y = 1; y < height; y++) {
             double angle = (double) y / height * Math.PI * 2 * turns;
             int x = (int) (Math.cos(angle) * radius);
@@ -294,10 +275,9 @@ public class StructureGenerator {
             block.setType(material);
             blocks.add(block);
             
-            // Делаем спираль немного толще
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
-                    if (Math.abs(dx) + Math.abs(dz) <= 1) { // Только крестообразные блоки
+                    if (Math.abs(dx) + Math.abs(dz) <= 1) {
                         Block surrounding = world.getBlockAt(centerX + x + dx, centerY + y, centerZ + z + dz);
                         if (surrounding.getType() == Material.AIR) {
                             surrounding.setType(material);

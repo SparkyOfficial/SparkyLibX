@@ -135,7 +135,6 @@ public class BlockUtils {
     public static List<Block> getAdjacentBlocks(Block block, boolean includeDiagonals) {
         List<Block> blocks = new ArrayList<>();
         
-        // Основные направления
         blocks.add(block.getRelative(BlockFace.UP));
         blocks.add(block.getRelative(BlockFace.DOWN));
         blocks.add(block.getRelative(BlockFace.NORTH));
@@ -144,13 +143,11 @@ public class BlockUtils {
         blocks.add(block.getRelative(BlockFace.EAST));
         
         if (includeDiagonals) {
-            // Горизонтальные диагонали
             blocks.add(block.getRelative(BlockFace.NORTH_EAST));
             blocks.add(block.getRelative(BlockFace.NORTH_WEST));
             blocks.add(block.getRelative(BlockFace.SOUTH_EAST));
             blocks.add(block.getRelative(BlockFace.SOUTH_WEST));
             
-            // Верхние диагонали
             Block up = block.getRelative(BlockFace.UP);
             blocks.add(up.getRelative(BlockFace.NORTH));
             blocks.add(up.getRelative(BlockFace.SOUTH));
@@ -161,7 +158,6 @@ public class BlockUtils {
             blocks.add(up.getRelative(BlockFace.SOUTH_EAST));
             blocks.add(up.getRelative(BlockFace.SOUTH_WEST));
             
-            // Нижние диагонали
             Block down = block.getRelative(BlockFace.DOWN);
             blocks.add(down.getRelative(BlockFace.NORTH));
             blocks.add(down.getRelative(BlockFace.SOUTH));
@@ -189,19 +185,15 @@ public class BlockUtils {
             return false;
         }
         
-        // Проверяем расстояние
         Location blockCenter = block.getLocation().add(0.5, 0.5, 0.5);
         if (viewerLocation.distance(blockCenter) > maxDistance) {
             return false;
         }
         
-        // Проверяем луч зрения
         return viewerLocation.getWorld().rayTraceBlocks(viewerLocation, 
             blockCenter.toVector().subtract(viewerLocation.toVector()).normalize(), 
             maxDistance) == null;
     }
-    
-    // ================ РАСШИРЕННЫЕ ФУНКЦИИ ДЛЯ БЛОКОВ ================
     
     /**
      * Создает куб из блоков
@@ -229,7 +221,6 @@ public class BlockUtils {
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
-                    // Если куб не пустотелый или блок на границе
                     if (!hollow || x == minX || x == maxX || y == minY || y == maxY || z == minZ || z == maxZ) {
                         Block block = world.getBlockAt(x, y, z);
                         if (block.getType() != material) {
@@ -267,7 +258,6 @@ public class BlockUtils {
                 for (int z = -radiusCeil; z <= radiusCeil; z++) {
                     double distance = Math.sqrt(x * x + y * y + z * z);
                     if (distance <= radius) {
-                        // Если сфера не пустотелая или блок на поверхности
                         if (!hollow || distance >= radius - 1) {
                             Block block = world.getBlockAt(centerX + x, centerY + y, centerZ + z);
                             if (block.getType() != material) {
@@ -448,20 +438,20 @@ public class BlockUtils {
         
         int radiusInt = (int) Math.ceil(radius);
         
+        NoiseGenerator noiseGen = new NoiseGenerator(System.currentTimeMillis());
+        
         for (int x = -radiusInt; x <= radiusInt; x++) {
             for (int y = -radiusInt; y <= radiusInt; y++) {
                 for (int z = -radiusInt; z <= radiusInt; z++) {
                     double distance = Math.sqrt(x * x + y * y + z * z);
                     
                     if (distance <= radius) {
-                        // Генерируем шум для этой позиции
-                        double noise = NoiseGenerator.perlinNoise(
+                        double noise = noiseGen.perlinNoise(
                             (centerX + x) * noiseScale,
                             (centerY + y) * noiseScale,
                             (centerZ + z) * noiseScale
                         );
                         
-                        // Используем шум для определения, должен ли быть размещен блок
                         if (noise > threshold) {
                             Block block = world.getBlockAt(centerX + x, centerY + y, centerZ + z);
                             block.setType(material);
@@ -498,13 +488,13 @@ public class BlockUtils {
         int minZ = Math.min(corner1.getBlockZ(), corner2.getBlockZ());
         int maxZ = Math.max(corner1.getBlockZ(), corner2.getBlockZ());
         
+        NoiseGenerator noiseGen = new NoiseGenerator(System.currentTimeMillis());
+        
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
-                // Генерируем высоту с использованием фрактального шума
-                double noise = NoiseGenerator.fractalNoise(x * scale, 0, z * scale, octaves, persistence, scale);
+                double noise = noiseGen.fractalBrownianMotion(x * scale, z * scale, octaves, persistence, scale);
                 int height = (int) (seaLevel + noise * heightMultiplier);
                 
-                // Создаем столбец блоков до рассчитанной высоты
                 for (int y = corner1.getBlockY(); y <= height && y <= corner2.getBlockY(); y++) {
                     Block block = world.getBlockAt(x, y, z);
                     block.setType(baseMaterial);
@@ -535,13 +525,13 @@ public class BlockUtils {
         int minZ = Math.min(corner1.getBlockZ(), corner2.getBlockZ());
         int maxZ = Math.max(corner1.getBlockZ(), corner2.getBlockZ());
         
+        NoiseGenerator noiseGen = new NoiseGenerator(System.currentTimeMillis());
+        
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
-                    // Генерируем значение Вороного для этой позиции
-                    double noise = NoiseGenerator.voronoiNoise(x, y, z, scale);
+                    double noise = noiseGen.voronoiNoise(x * scale, y * scale, 10);
                     
-                    // Выбираем материал на основе значения шума
                     int materialIndex = (int) (noise * materials.length) % materials.length;
                     Material material = materials[materialIndex];
                     
@@ -577,29 +567,31 @@ public class BlockUtils {
         int minZ = Math.min(corner1.getBlockZ(), corner2.getBlockZ());
         int maxZ = Math.max(corner1.getBlockZ(), corner2.getBlockZ());
         
+        NoiseGenerator noiseGen = new NoiseGenerator(System.currentTimeMillis());
+        
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     double value;
                     switch (direction) {
-                        case 0: // Волна по оси X
-                            value = NoiseGenerator.waveNoise(x, y, z, frequency, amplitude);
+                        case 0:
+                            value = noiseGen.waveNoise(x, y, frequency, amplitude);
                             if (value > 0.5) {
                                 Block block = world.getBlockAt(x, y, z);
                                 block.setType(material);
                                 blocks.add(block);
                             }
                             break;
-                        case 1: // Волна по оси Y
-                            value = NoiseGenerator.waveNoise(x, y, z, frequency, amplitude);
+                        case 1:
+                            value = noiseGen.waveNoise(x, y, frequency, amplitude);
                             if (value > 0.5) {
                                 Block block = world.getBlockAt(x, y, z);
                                 block.setType(material);
                                 blocks.add(block);
                             }
                             break;
-                        case 2: // Волна по оси Z
-                            value = NoiseGenerator.waveNoise(x, y, z, frequency, amplitude);
+                        case 2:
+                            value = noiseGen.waveNoise(x, y, frequency, amplitude);
                             if (value > 0.5) {
                                 Block block = world.getBlockAt(x, y, z);
                                 block.setType(material);
@@ -627,7 +619,7 @@ public class BlockUtils {
         List<Block> blocks = new ArrayList<>();
         World world = center.getWorld();
         
-        int points = (int) (turns * 50); // Количество точек зависит от количества оборотов
+        int points = (int) (turns * 50);
         
         for (int i = 0; i < points; i++) {
             double t = (double) i / points;
@@ -665,11 +657,13 @@ public class BlockUtils {
         int minZ = Math.min(corner1.getBlockZ(), corner2.getBlockZ());
         int maxZ = Math.max(corner1.getBlockZ(), corner2.getBlockZ());
         
+        NoiseGenerator noiseGen = new NoiseGenerator(System.currentTimeMillis());
+        
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
-                    int value = NoiseGenerator.checkerboard(x, y, size) + NoiseGenerator.checkerboard(y, z, size) + 
-                               NoiseGenerator.checkerboard(x, z, size);
+                    int value = (int) (noiseGen.checkerboard(x, y, size) + noiseGen.checkerboard(y, z, size) + 
+                               noiseGen.checkerboard(x, z, size));
                     Material material = (value % 2 == 0) ? material1 : material2;
                     
                     Block block = world.getBlockAt(x, y, z);

@@ -1,12 +1,18 @@
 package com.sparky.libx.spatial;
 
-import com.sparky.libx.region.Region;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.util.BoundingBox;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.sparky.libx.region.Region;
 
 /**
  * Пространственный индекс для эффективного поиска регионов
@@ -111,7 +117,6 @@ public class SpatialIndex {
             BoundingBox mbr = getBoundingBox(region);
             remove(root, region, mbr);
             
-
             if (root instanceof InternalNode && root.entries.size() == 1) {
                 root = ((InternalNode) root).entries.get(0).node;
             }
@@ -127,7 +132,6 @@ public class SpatialIndex {
                     if (entry.mbr.overlaps(mbr)) {
                         if (remove(entry.node, region, mbr)) {
                             if (entry.node.entries.size() < MIN_ENTRIES) {
-
                                 handleUnderflow(internal, entry);
                             }
                             return true;
@@ -139,7 +143,6 @@ public class SpatialIndex {
         }
         
         private void handleUnderflow(InternalNode parent, Entry underflowEntry) {
-
             Entry bestEntry = null;
             double minIncrease = Double.POSITIVE_INFINITY;
             
@@ -157,7 +160,6 @@ public class SpatialIndex {
             }
             
             if (bestEntry != null && underflowEntry.node.entries.size() + bestEntry.node.entries.size() <= MAX_ENTRIES) {
-
                 bestEntry.node.entries.addAll(underflowEntry.node.entries);
                 bestEntry.mbr = calculateMBR(bestEntry.node);
                 parent.entries.remove(underflowEntry);
@@ -238,7 +240,6 @@ public class SpatialIndex {
                 return chooseLeaf(bestEntry.node, mbr);
             }
             
-
             throw new IllegalStateException("No suitable child found for insertion");
         }
         
@@ -293,15 +294,12 @@ public class SpatialIndex {
             public void insert(Region region, BoundingBox mbr) {
                 regions.add(region);
                 regionBoxes.put(region, mbr);
-                
-
                 updateAncestorMBRs(mbr);
             }
             
             public boolean remove(Region region) {
                 BoundingBox mbr = regionBoxes.remove(region);
                 if (mbr != null && regions.remove(region)) {
-
                     updateAncestorMBRs(mbr);
                     return true;
                 }
@@ -313,7 +311,6 @@ public class SpatialIndex {
                     return null;
                 }
                 
-
                 int mid = regions.size() / 2;
                 LeafNode newLeaf = new LeafNode();
                 
@@ -322,15 +319,12 @@ public class SpatialIndex {
                     newLeaf.insert(region, regionBoxes.get(region));
                 }
                 
-
                 regions.subList(mid, regions.size()).clear();
                 
                 return newLeaf;
             }
             
             private void updateAncestorMBRs(BoundingBox mbr) {
-
-
             }
             
             @Override

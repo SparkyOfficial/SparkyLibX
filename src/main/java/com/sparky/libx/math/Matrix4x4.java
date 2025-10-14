@@ -1,186 +1,201 @@
 package com.sparky.libx.math;
 
 /**
- * Класс для работы с матрицами 4x4
- * Используется для трехмерных преобразований
+ * 4x4 матрица для 3D преобразований
  */
 public class Matrix4x4 {
-    private final double[][] matrix;
+    private final double[][] elements;
     
     /**
-     * Создает единичную матрицу 4x4
+     * Создает новую единичную матрицу
      */
     public Matrix4x4() {
-        matrix = new double[4][4];
-
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                matrix[i][j] = (i == j) ? 1.0 : 0.0;
-            }
-        }
+        elements = new double[4][4];
+        setIdentity();
     }
     
     /**
-     * Создает матрицу из двумерного массива
-     * @param values массив 4x4
-     * @throws IllegalArgumentException если массив не 4x4
+     * Создает новую матрицу с заданными элементами
      */
-    public Matrix4x4(double[][] values) {
-        if (values.length != 4 || values[0].length != 4) {
-            throw new IllegalArgumentException("Матрица должна быть размером 4x4");
-        }
-        this.matrix = new double[4][4];
-        for (int i = 0; i < 4; i++) {
-            System.arraycopy(values[i], 0, this.matrix[i], 0, 4);
-        }
-    }
-    
-    /**
-     * Умножение матриц
-     * @param other другая матрица 4x4
-     * @return новая матрица - результат умножения
-     */
-    public Matrix4x4 multiply(Matrix4x4 other) {
-        double[][] result = new double[4][4];
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                for (int k = 0; k < 4; k++) {
-                    result[i][j] += this.matrix[i][k] * other.matrix[k][j];
-                }
-            }
-        }
-        return new Matrix4x4(result);
-    }
-    
-    /**
-     * Умножение матрицы на вектор
-     * @param vector вектор [x, y, z, w]
-     * @return новый вектор - результат умножения
-     */
-    public double[] multiplyVector(double[] vector) {
-        if (vector.length != 4) {
-            throw new IllegalArgumentException("Вектор должен иметь длину 4");
+    public Matrix4x4(double[][] elements) {
+        if (elements.length != 4 || elements[0].length != 4) {
+            throw new IllegalArgumentException("Матрица должна быть 4x4");
         }
         
-        double[] result = new double[4];
+        this.elements = new double[4][4];
+        for (int i = 0; i < 4; i++) {
+            System.arraycopy(elements[i], 0, this.elements[i], 0, 4);
+        }
+    }
+    
+    /**
+     * Устанавливает матрицу как единичную
+     */
+    public void setIdentity() {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                result[i] += matrix[i][j] * vector[j];
+                elements[i][j] = (i == j) ? 1.0 : 0.0;
+            }
+        }
+    }
+    
+    /**
+     * Получает элемент матрицы по индексам
+     */
+    public double get(int row, int col) {
+        return elements[row][col];
+    }
+    
+    /**
+     * Устанавливает элемент матрицы по индексам
+     */
+    public void set(int row, int col, double value) {
+        elements[row][col] = value;
+    }
+    
+    /**
+     * Складывает две матрицы
+     */
+    public Matrix4x4 add(Matrix4x4 other) {
+        Matrix4x4 result = new Matrix4x4();
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                result.elements[i][j] = this.elements[i][j] + other.elements[i][j];
             }
         }
         return result;
     }
     
     /**
-     * Создает матрицу поворота вокруг оси X
-     * @param angle угол в радианах
-     * @return матрица поворота
+     * Вычитает одну матрицу из другой
      */
-    public static Matrix4x4 rotationX(double angle) {
-        double cos = Math.cos(angle);
-        double sin = Math.sin(angle);
-        
-        return new Matrix4x4(new double[][]{
-            {1, 0, 0, 0},
-            {0, cos, -sin, 0},
-            {0, sin, cos, 0},
-            {0, 0, 0, 1}
-        });
+    public Matrix4x4 subtract(Matrix4x4 other) {
+        Matrix4x4 result = new Matrix4x4();
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                result.elements[i][j] = this.elements[i][j] - other.elements[i][j];
+            }
+        }
+        return result;
     }
     
     /**
-     * Создает матрицу поворота вокруг оси Y
-     * @param angle угол в радианах
-     * @return матрица поворота
+     * Умножает матрицу на скаляр
      */
-    public static Matrix4x4 rotationY(double angle) {
-        double cos = Math.cos(angle);
-        double sin = Math.sin(angle);
-        
-        return new Matrix4x4(new double[][]{
-            {cos, 0, sin, 0},
-            {0, 1, 0, 0},
-            {-sin, 0, cos, 0},
-            {0, 0, 0, 1}
-        });
+    public Matrix4x4 multiply(double scalar) {
+        Matrix4x4 result = new Matrix4x4();
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                result.elements[i][j] = this.elements[i][j] * scalar;
+            }
+        }
+        return result;
     }
     
     /**
-     * Создает матрицу поворота вокруг оси Z
-     * @param angle угол в радианах
-     * @return матрица поворота
+     * Умножает две матрицы
      */
-    public static Matrix4x4 rotationZ(double angle) {
-        double cos = Math.cos(angle);
-        double sin = Math.sin(angle);
-        
-        return new Matrix4x4(new double[][]{
-            {cos, -sin, 0, 0},
-            {sin, cos, 0, 0},
-            {0, 0, 1, 0},
-            {0, 0, 0, 1}
-        });
+    public Matrix4x4 multiply(Matrix4x4 other) {
+        Matrix4x4 result = new Matrix4x4();
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                double sum = 0;
+                for (int k = 0; k < 4; k++) {
+                    sum += this.elements[i][k] * other.elements[k][j];
+                }
+                result.elements[i][j] = sum;
+            }
+        }
+        return result;
+    }
+    
+    /**
+     * Транспонирует матрицу
+     */
+    public Matrix4x4 transpose() {
+        Matrix4x4 result = new Matrix4x4();
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                result.elements[i][j] = this.elements[j][i];
+            }
+        }
+        return result;
     }
     
     /**
      * Создает матрицу масштабирования
-     * @param scaleX масштаб по X
-     * @param scaleY масштаб по Y
-     * @param scaleZ масштаб по Z
-     * @return матрица масштабирования
      */
-    public static Matrix4x4 scale(double scaleX, double scaleY, double scaleZ) {
-        return new Matrix4x4(new double[][]{
-            {scaleX, 0, 0, 0},
-            {0, scaleY, 0, 0},
-            {0, 0, scaleZ, 0},
-            {0, 0, 0, 1}
-        });
+    public static Matrix4x4 createScale(double sx, double sy, double sz) {
+        Matrix4x4 matrix = new Matrix4x4();
+        matrix.elements[0][0] = sx;
+        matrix.elements[1][1] = sy;
+        matrix.elements[2][2] = sz;
+        return matrix;
     }
     
     /**
      * Создает матрицу переноса
-     * @param dx смещение по X
-     * @param dy смещение по Y
-     * @param dz смещение по Z
-     * @return матрица переноса
      */
-    public static Matrix4x4 translate(double dx, double dy, double dz) {
-        return new Matrix4x4(new double[][]{
-            {1, 0, 0, dx},
-            {0, 1, 0, dy},
-            {0, 0, 1, dz},
-            {0, 0, 0, 1}
-        });
+    public static Matrix4x4 createTranslation(double tx, double ty, double tz) {
+        Matrix4x4 matrix = new Matrix4x4();
+        matrix.elements[0][3] = tx;
+        matrix.elements[1][3] = ty;
+        matrix.elements[2][3] = tz;
+        return matrix;
+    }
+    
+    /**
+     * Создает матрицу поворота вокруг оси X
+     */
+    public static Matrix4x4 createRotationX(double angle) {
+        Matrix4x4 matrix = new Matrix4x4();
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        matrix.elements[1][1] = cos;
+        matrix.elements[1][2] = -sin;
+        matrix.elements[2][1] = sin;
+        matrix.elements[2][2] = cos;
+        return matrix;
+    }
+    
+    /**
+     * Создает матрицу поворота вокруг оси Y
+     */
+    public static Matrix4x4 createRotationY(double angle) {
+        Matrix4x4 matrix = new Matrix4x4();
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        matrix.elements[0][0] = cos;
+        matrix.elements[0][2] = sin;
+        matrix.elements[2][0] = -sin;
+        matrix.elements[2][2] = cos;
+        return matrix;
+    }
+    
+    /**
+     * Создает матрицу поворота вокруг оси Z
+     */
+    public static Matrix4x4 createRotationZ(double angle) {
+        Matrix4x4 matrix = new Matrix4x4();
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        matrix.elements[0][0] = cos;
+        matrix.elements[0][1] = -sin;
+        matrix.elements[1][0] = sin;
+        matrix.elements[1][1] = cos;
+        return matrix;
     }
     
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
+        sb.append("Matrix4x4:\n");
         for (int i = 0; i < 4; i++) {
-            sb.append("[");
             for (int j = 0; j < 4; j++) {
-                sb.append(String.format("%8.4f", matrix[i][j]));
-                if (j < 3) sb.append(", ");
+                sb.append(String.format("%10.3f ", elements[i][j]));
             }
-            sb.append("]");
-            if (i < 3) sb.append("\n");
+            sb.append("\n");
         }
         return sb.toString();
-    }
-    
-
-    public double get(int row, int col) {
-        if (row < 0 || row >= 4 || col < 0 || col >= 4) {
-            throw new IndexOutOfBoundsException("Индексы должны быть в диапазоне [0, 3]");
-        }
-        return matrix[row][col];
-    }
-    
-    public void set(int row, int col, double value) {
-        if (row < 0 || row >= 4 || col < 0 || col >= 4) {
-            throw new IndexOutOfBoundsException("Индексы должны быть в диапазоне [0, 3]");
-        }
-        matrix[row][col] = value;
     }
 }

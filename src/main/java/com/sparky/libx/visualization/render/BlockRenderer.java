@@ -1,14 +1,20 @@
 package com.sparky.libx.visualization.render;
 
-import com.sparky.libx.region.Region;
-import org.bukkit.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.sparky.libx.region.Region;
 
 /**
  * Рендерер, отображающий регионы с помощью блоков
@@ -27,14 +33,11 @@ public class BlockRenderer implements RegionRenderer {
     
     @Override
     public void render(Player player, Region region) {
-
         clear(player);
-        
 
         RenderTask task = new RenderTask(player, region);
         task.runTaskTimer(Bukkit.getPluginManager().getPlugin("SparkyLibX"), 0, 20);
         activeRenders.put(player.getUniqueId(), task);
-        
 
         if (duration > 0) {
             Bukkit.getScheduler().runTaskLater(
@@ -75,16 +78,12 @@ public class BlockRenderer implements RegionRenderer {
         public RenderTask(Player player, Region region) {
             this.player = player;
             this.region = region;
-            
 
             if (wireframe) {
-
                 collectWireframeBlocks();
             } else {
-
                 collectSolidBlocks();
             }
-            
 
             for (Location loc : renderedBlocks) {
                 originalBlocks.put(loc, loc.getBlock().getBlockData().clone());
@@ -98,7 +97,6 @@ public class BlockRenderer implements RegionRenderer {
                 cancel();
                 return;
             }
-            
 
             for (Location loc : renderedBlocks) {
                 player.sendBlockChange(loc, blockData);
@@ -128,18 +126,12 @@ public class BlockRenderer implements RegionRenderer {
          * Собирает блоки для каркасного режима
          */
         private void collectWireframeBlocks() {
-
-
-
         }
         
         /**
          * Собирает блоки для сплошного режима
          */
         private void collectSolidBlocks() {
-
-
-
         }
     }
 }

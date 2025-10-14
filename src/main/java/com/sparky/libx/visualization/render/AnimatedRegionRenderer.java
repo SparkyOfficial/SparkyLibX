@@ -35,15 +35,12 @@ public class AnimatedRegionRenderer implements RegionRenderer {
      * Отображает регион с анимацией
      */
     public void renderAnimated(Player player, Region region, AnimationStyle style) {
-        // Останавливаем предыдущую анимацию для игрока
         clear(player);
         
-        // Создаем новую задачу анимации
         AnimationTask task = new AnimationTask(player, region, style);
         task.runTaskTimer(Bukkit.getPluginManager().getPlugin("SparkyLibX"), 0, style.getFrameDelay());
         activeAnimations.put(player.getUniqueId(), task);
         
-        // Автоматически останавливаем анимацию через заданное время
         if (style.getDuration() > 0) {
             Bukkit.getScheduler().runTaskLater(
                 Bukkit.getPluginManager().getPlugin("SparkyLibX"),
@@ -55,7 +52,6 @@ public class AnimatedRegionRenderer implements RegionRenderer {
     
     @Override
     public void render(Player player, Region region) {
-        // По умолчанию используем пульсирующую анимацию
         renderAnimated(player, region, AnimationStyle.PULSE);
     }
     
@@ -105,14 +101,12 @@ public class AnimatedRegionRenderer implements RegionRenderer {
             World world = player.getWorld();
             Location playerLoc = player.getLocation();
             
-            // Обновляем прогресс анимации
             animationProgress += style.getSpeed();
             if (animationProgress >= 1.0) {
                 animationProgress = 0.0;
                 frame++;
             }
             
-            // Отображаем частицы в соответствии со стилем анимации
             renderFrame(world, playerLoc, frame, animationProgress);
         }
         
@@ -125,7 +119,6 @@ public class AnimatedRegionRenderer implements RegionRenderer {
                 (int)(points.size() * style.getDensity())
             );
             
-            // Выбираем точки для отображения в этом кадре
             int startIndex = (frame * style.getParticlesPerFrame()) % points.size();
             
             for (int i = 0; i < particlesToShow; i++) {
@@ -134,11 +127,9 @@ public class AnimatedRegionRenderer implements RegionRenderer {
                 
                 Location particleLoc = new Location(world, point.getX(), point.getY(), point.getZ());
                 
-                // Проверяем видимость частицы
                 if (playerLoc.distanceSquared(particleLoc) < 1024 && 
                     player.getLocation().getDirection().dot(particleLoc.toVector().subtract(playerLoc.toVector())) > 0) {
                     
-                    // Применяем эффекты анимации
                     Location animatedLoc = applyAnimationEffects(particleLoc, progress);
                     Particle particle = getAnimatedParticle(progress);
                     Object particleData = getAnimatedParticleData(progress);
@@ -161,19 +152,15 @@ public class AnimatedRegionRenderer implements RegionRenderer {
             
             switch (style.getEffect()) {
                 case PULSE:
-                    // Пульсирующий эффект - частицы меняют размер
                     double scale = 1.0 + 0.5 * Math.sin(progress * Math.PI * 2);
-                    // Тут мы не меняем позицию, но можем использовать scale для других эффектов
                     break;
                     
                 case WAVE:
-                    // Волновой эффект - частицы двигаются вверх-вниз
                     double waveOffset = Math.sin(progress * Math.PI * 4) * 0.5;
                     animated.add(0, waveOffset, 0);
                     break;
                     
                 case SPIRAL:
-                    // Спиральный эффект - частицы двигаются по спирали
                     double angle = progress * Math.PI * 4;
                     double radius = 0.3 * progress;
                     animated.add(
@@ -210,7 +197,6 @@ public class AnimatedRegionRenderer implements RegionRenderer {
         private Object getAnimatedParticleData(double progress) {
             switch (style.getParticleTransition()) {
                 case COLOR_SHIFT:
-                    // Изменение цвета от красного до синего
                     int red = (int)(255 * (1 - progress));
                     int blue = (int)(255 * progress);
                     return new Particle.DustOptions(Color.fromRGB(red, 0, blue), 1.0f);
@@ -229,7 +215,6 @@ public class AnimatedRegionRenderer implements RegionRenderer {
             Location min = region.getMinPoint();
             Location max = region.getMaxPoint();
             
-            // Генерируем точки по границам кубоида
             generateLinePoints(points, min, new Location(min.getWorld(), max.getX(), min.getY(), min.getZ()));
             generateLinePoints(points, min, new Location(min.getWorld(), min.getX(), max.getY(), min.getZ()));
             generateLinePoints(points, min, new Location(min.getWorld(), min.getX(), min.getY(), max.getZ()));
@@ -237,7 +222,6 @@ public class AnimatedRegionRenderer implements RegionRenderer {
             generateLinePoints(points, max, new Location(max.getWorld(), max.getX(), min.getY(), max.getZ()));
             generateLinePoints(points, max, new Location(max.getWorld(), max.getX(), max.getY(), min.getZ()));
             
-            // Добавляем диагонали для лучшей видимости
             generateLinePoints(points, new Location(min.getWorld(), min.getX(), min.getY(), max.getZ()), 
                               new Location(min.getWorld(), max.getX(), min.getY(), min.getZ()));
             generateLinePoints(points, new Location(min.getWorld(), min.getX(), max.getY(), min.getZ()), 
@@ -272,12 +256,12 @@ public class AnimatedRegionRenderer implements RegionRenderer {
             new Particle.DustOptions(Color.RED, 1.0f),
             AnimationEffect.PULSE,
             ParticleTransition.NONE,
-            0.1,    // плотность
-            5,      // частиц за кадр
-            2,      // задержка кадра (тики)
-            0.05,   // скорость
-            200,    // длительность (тики, 0 = бесконечная)
-            0.5     // расстояние между точками
+            0.1,
+            5,
+            2,
+            0.05,
+            200,
+            0.5
         );
         
         public static final AnimationStyle WAVE = new AnimationStyle(
@@ -332,7 +316,6 @@ public class AnimatedRegionRenderer implements RegionRenderer {
             this.pointSpacing = pointSpacing;
         }
         
-        // Getters
         public Particle getBaseParticle() { return baseParticle; }
         public Object getBaseParticleData() { return baseParticleData; }
         public AnimationEffect getEffect() { return effect; }
@@ -349,17 +332,17 @@ public class AnimatedRegionRenderer implements RegionRenderer {
      * Типы анимационных эффектов
      */
     public enum AnimationEffect {
-        PULSE,      // Пульсирующий эффект
-        WAVE,       // Волновой эффект
-        SPIRAL      // Спиральный эффект
+        PULSE,
+        WAVE,
+        SPIRAL
     }
     
     /**
      * Типы переходов частиц
      */
     public enum ParticleTransition {
-        NONE,           // Без перехода
-        COLOR_SHIFT,    // Изменение цвета
-        TYPE_CYCLE      // Циклическое изменение типа частицы
+        NONE,
+        COLOR_SHIFT,
+        TYPE_CYCLE
     }
 }

@@ -134,7 +134,6 @@ public class RegionCommand implements CommandExecutor, TabCompleter {
                 }
                 return new com.sparky.libx.region.SphereRegion(name, points[0], radius);
             case "polygon":
-
                 throw new UnsupportedOperationException("Создание полигонов через команду пока не поддерживается");
             default:
                 throw new IllegalArgumentException("Неизвестный тип региона: " + type);
@@ -210,7 +209,6 @@ public class RegionCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-
         Location[] points = new Location[2];
         points[0] = region.getMinPoint();
         points[1] = region.getMaxPoint();
@@ -250,9 +248,7 @@ public class RegionCommand implements CommandExecutor, TabCompleter {
             player.sendMessage(ChatColor.GREEN + "Вторая позиция установлена: " + formatLocation(points[1]));
         }
         
-
         if (points[0] != null && points[1] != null) {
-
             Region tempRegion = new com.sparky.libx.region.CuboidRegion(
                 "selection", points[0], points[1]);
             visualizer.visualize(player, tempRegion, "selection");

@@ -14,35 +14,34 @@ import org.bukkit.util.Vector;
  * @author Андрій Будильников
  */
 public class Ray {
+    private final World world;
     private final Vector origin;
     private final Vector direction;
-    private final World world;
     
     /**
-     * Создает луч из начальной точки в заданном направлении
+     * Создает новый луч
+     * @param world мир
      * @param origin начальная точка
-     * @param direction направление (будет нормализовано)
+     * @param direction направление (должно быть нормализовано)
      */
-    public Ray(Location origin, Vector direction) {
-        this.origin = origin.toVector();
-        this.direction = direction.normalize();
-        this.world = origin.getWorld();
+    public Ray(World world, Vector origin, Vector direction) {
+        this.world = world;
+        this.origin = origin.clone();
+        this.direction = direction.clone().normalize();
     }
     
     /**
-     * Создает луч между двумя точками
-     * @param start начальная точка
-     * @param end конечная точка
+     * Создает луч из местоположения
+     * @param location местоположение игрока
+     * @param direction направление
      */
-    public Ray(Location start, Location end) {
-        this.origin = start.toVector();
-        this.direction = end.toVector().subtract(start.toVector()).normalize();
-        this.world = start.getWorld();
+    public Ray(Location location, Vector direction) {
+        this(location.getWorld(), location.toVector(), direction);
     }
     
     /**
-     * Выполняет трассировку луча до первого пересечения с блоком
-     * @param maxDistance максимальная дистанция трассировки
+     * Трассирует луч до первого твердого блока
+     * @param maxDistance максимальная дистанция
      * @param ignoreTransparent игнорировать прозрачные блоки
      * @return информация о пересечении или null, если пересечения нет
      */
@@ -50,7 +49,7 @@ public class Ray {
         if (world == null) return null;
         
         Vector currentPos = origin.clone();
-        Vector step = direction.clone().multiply(0.1); // Малый шаг для точности
+        Vector step = direction.clone().multiply(0.1);
 
         
         Block lastBlock = null;
@@ -61,15 +60,12 @@ public class Ray {
             distance += step.length();
             
             Block block = currentPos.toLocation(world).getBlock();
-            
 
             if (block.equals(lastBlock)) continue;
             
             lastBlock = block;
-            
 
             if (block.getType().isSolid() && (!ignoreTransparent || !block.isPassable())) {
-
                 Vector hitPoint = getExactIntersectionPoint(block, currentPos);
                 if (hitPoint != null) {
                     return new RayHit(
@@ -95,7 +91,7 @@ public class Ray {
         if (world == null) return blocks;
         
         Vector currentPos = origin.clone();
-        Vector step = direction.clone().multiply(0.5); // Больший шаг для производительности
+        Vector step = direction.clone().multiply(0.5);
 
         
         Block lastBlock = null;
@@ -106,7 +102,6 @@ public class Ray {
             distance += step.length();
             
             Block block = currentPos.toLocation(world).getBlock();
-            
 
             if (!block.equals(lastBlock)) {
                 blocks.add(block);
@@ -121,8 +116,6 @@ public class Ray {
      * Вычисляет точное местоположение пересечения с блоком
      */
     private Vector getExactIntersectionPoint(Block block, Vector approxPosition) {
-
-
         return approxPosition.clone();
     }
     
@@ -131,7 +124,6 @@ public class Ray {
      */
     private BlockFace getHitFace(Vector hitPoint, Vector blockCenter) {
         Vector relativeHit = hitPoint.clone().subtract(blockCenter);
-        
 
         double max = Math.max(Math.max(
             Math.abs(relativeHit.getX()),

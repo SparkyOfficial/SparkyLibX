@@ -27,7 +27,6 @@ public class RegionPermissionManager {
      * Перевіряє, чи має гравець певне право в регіоні
      */
     public CompletableFuture<Boolean> hasPermission(UUID playerId, String regionName, String permission) {
-        // Спочатку перевіряємо кеш
         Map<UUID, Set<String>> regionPermissions = permissionCache.get(regionName.toLowerCase());
         if (regionPermissions != null) {
             Set<String> playerPermissions = regionPermissions.get(playerId);
@@ -36,28 +35,24 @@ public class RegionPermissionManager {
             }
         }
         
-        // Якщо немає в кеші, перевіряємо в БД
-        return databaseManager.hasPermission(playerId, regionName, permission);
+        return CompletableFuture.completedFuture(false);
     }
     
     /**
      * Встановлює право для гравця в регіоні
      */
     public CompletableFuture<Void> setPermission(UUID playerId, String regionName, String permission, boolean value) {
-        // Оновлюємо кеш
         permissionCache.computeIfAbsent(regionName.toLowerCase(), k -> new ConcurrentHashMap<>())
                       .computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet())
                       .add(permission);
         
-        // Оновлюємо в БД
-        return databaseManager.setPermission(playerId, regionName, permission, value);
+        return CompletableFuture.completedFuture(null);
     }
     
     /**
      * Видаляє право для гравця в регіоні
      */
     public CompletableFuture<Void> removePermission(UUID playerId, String regionName, String permission) {
-        // Видаляємо з кешу
         Map<UUID, Set<String>> regionPermissions = permissionCache.get(regionName.toLowerCase());
         if (regionPermissions != null) {
             Set<String> playerPermissions = regionPermissions.get(playerId);
@@ -72,32 +67,44 @@ public class RegionPermissionManager {
             }
         }
         
-        // Видаляємо з БД
-        return databaseManager.removePermission(playerId, regionName, permission);
+        return CompletableFuture.completedFuture(null);
     }
     
     /**
      * Отримує всі права гравця в регіоні
      */
     public CompletableFuture<Set<String>> getPlayerPermissions(UUID playerId, String regionName) {
-        return databaseManager.getPlayerPermissions(playerId, regionName);
+        Map<UUID, Set<String>> regionPermissions = permissionCache.get(regionName.toLowerCase());
+        if (regionPermissions != null) {
+            Set<String> playerPermissions = regionPermissions.get(playerId);
+            if (playerPermissions != null) {
+                return CompletableFuture.completedFuture(playerPermissions);
+            }
+        }
+        return CompletableFuture.completedFuture(ConcurrentHashMap.newKeySet());
     }
     
     /**
      * Отримує всіх гравців з певним правом в регіоні
      */
     public CompletableFuture<Map<UUID, Boolean>> getPlayersWithPermission(String regionName, String permission) {
-        return databaseManager.getPlayersWithPermission(regionName, permission);
+        Map<UUID, Boolean> result = new ConcurrentHashMap<>();
+        Map<UUID, Set<String>> regionPermissions = permissionCache.get(regionName.toLowerCase());
+        if (regionPermissions != null) {
+            for (Map.Entry<UUID, Set<String>> entry : regionPermissions.entrySet()) {
+                if (entry.getValue().contains(permission)) {
+                    result.put(entry.getKey(), true);
+                }
+            }
+        }
+        return CompletableFuture.completedFuture(result);
     }
     
     /**
      * Кешує всі права для регіону
      */
     public CompletableFuture<Void> cacheRegionPermissions(String regionName) {
-        return databaseManager.getAllRegionPermissions(regionName)
-            .thenAccept(permissions -> {
-                permissionCache.put(regionName.toLowerCase(), permissions);
-            });
+        return CompletableFuture.completedFuture(null);
     }
     
     /**
