@@ -1,15 +1,15 @@
 package com.sparky.libx.region;
 
+import java.util.Map;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.serialization.SerializableAs;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * Реализация региона в форме кубоида
+ * Прямоугольный регион (кубоид)
+ * author: Андрій Будильников
  */
 @SerializableAs("CuboidRegion")
 public class CuboidRegion extends Region {
@@ -41,7 +41,7 @@ public class CuboidRegion extends Region {
         );
         
         if (!corner1.getWorld().equals(corner2.getWorld())) {
-            throw new IllegalArgumentException("Corners must be in the same world");
+            throw new IllegalArgumentException("Углы должны быть в одном мире");
         }
     }
     

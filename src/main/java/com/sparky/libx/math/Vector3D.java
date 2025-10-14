@@ -4,7 +4,8 @@ import org.bukkit.Location;
 import org.bukkit.util.Vector;
 
 /**
- * Класс для работы с трехмерными векторами
+ * 3D вектор для математических расчетов
+ * author: Андрій Будильников
  */
 public class Vector3D {
     private double x;
@@ -97,10 +98,10 @@ public class Vector3D {
     }
 
     /**
-     * Линейная интерполяция между двумя векторами
+     * Интерполирует между двумя векторами
      * @param other второй вектор
-     * @param t параметр интерполяции (0.0 = этот вектор, 1.0 = другой вектор)
-     * @return интерполированный вектор
+     * @param t параметр от 0 до 1
+     * @return новый вектор между исходными
      */
     public Vector3D lerp(Vector3D other, double t) {
         return new Vector3D(

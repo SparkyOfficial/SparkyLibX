@@ -33,7 +33,8 @@ import org.bukkit.scheduler.BukkitTask;
 import com.sparky.libx.region.Region;
 
 /**
- * Менеджер для асинхронной работы с базой данных
+ * Работа с базой данных в отдельном потоке
+ * author: Андрій Будильников
  */
 public class DatabaseManager {
     private final Plugin plugin;
@@ -59,13 +60,13 @@ public class DatabaseManager {
         this.plugin = plugin;
         this.dataSource = dataSource;
         
-        // Создаем пул потоков для операций с базой данных
+        // пул потоков для работы с БД
         int poolSize = Math.max(4, Runtime.getRuntime().availableProcessors());
         this.dbExecutor = new ThreadPoolExecutor(
-            2, // Минимальное количество потоков
-            poolSize, // Максимальное количество потоков
-            60L, TimeUnit.SECONDS, // Время простоя потока перед умиранием
-            new LinkedBlockingQueue<>(1000), // Очередь задач
+            2, // минимум потоков
+            poolSize, // максимум потоков
+            60L, TimeUnit.SECONDS, // время простоя перед завершением
+            new LinkedBlockingQueue<>(1000), // очередь задач
             new ThreadFactory() {
                 private final AtomicInteger counter = new AtomicInteger(0);
                 
@@ -77,23 +78,23 @@ public class DatabaseManager {
                     return t;
                 }
             },
-            new ThreadPoolExecutor.CallerRunsPolicy() // Если очередь переполнена, выполняем в вызывающем потоке
+            new ThreadPoolExecutor.CallerRunsPolicy() // если очередь полная, выполняем в текущем потоке
         );
         
-        // Инициализируем базу данных
+        // создаем таблицы если их нет
         initializeDatabase();
         
-        // Запускаем периодическое сохранение
+        // авто-сохранение каждые 5 минут
         new BukkitRunnable() {
             @Override
             public void run() {
                 saveAllModified();
             }
-        }.runTaskTimerAsynchronously(plugin, 6000, 6000); // Каждые 5 минут
+        }.runTaskTimerAsynchronously(plugin, 6000, 6000); // каждые 5 минут
     }
     
     /**
-     * Инициализирует таблицы в базе данных
+     * Создает таблицы в БД если их еще нет
      */
     private void initializeDatabase() {
         try (Connection conn = dataSource.getConnection();
@@ -120,13 +121,16 @@ public class DatabaseManager {
             stmt.execute("ANALYZE;");
             
         } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to initialize database: " + e.getMessage());
-            throw new RuntimeException("Database initialization failed", e);
+            plugin.getLogger().severe("Не удалось инициализировать БД: " + e.getMessage());
+            throw new RuntimeException("Ошибка инициализации БД", e);
         }
+        
+        // создаем таблицы для прав доступа
+        initializePermissionTables();
     }
     
     /**
-     * Загружает регион по ID
+     * Загружает регион по ID из БД
      */
     public CompletableFuture<Region> loadRegion(UUID regionId) {
 
@@ -160,8 +164,8 @@ public class DatabaseManager {
                 return null;
                 
             } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to load region: " + e.getMessage());
-                throw new RuntimeException("Database error", e);
+                plugin.getLogger().severe("Ошибка загрузки региона: " + e.getMessage());
+                throw new RuntimeException("Ошибка БД", e);
             }
         }, runAsync());
     }
@@ -193,14 +197,14 @@ public class DatabaseManager {
                 return null;
                 
             } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to load region by name: " + e.getMessage());
-                throw new RuntimeException("Database error", e);
+                plugin.getLogger().severe("Ошибка загрузки региона по имени: " + e.getMessage());
+                throw new RuntimeException("Ошибка БД", e);
             }
         }, runAsync());
     }
     
     /**
-     * Асинхронно сохраняет регион
+     * Сохраняет регион (асинхронно)
      */
     public CompletableFuture<Void> saveRegion(Region region) {
         UUID regionId = getOrCreateRegionId(region);
@@ -221,7 +225,7 @@ public class DatabaseManager {
     }
     
     /**
-     * Удаляет регион
+     * Удаляет регион из БД
      */
     public CompletableFuture<Boolean> deleteRegion(UUID regionId) {
         pendingDeletions.add(regionId);
@@ -252,17 +256,17 @@ public class DatabaseManager {
                     
                 } catch (SQLException e) {
                     conn.rollback();
-                    throw new CompletionException("Failed to delete region: " + e.getMessage(), e);
+                    throw new CompletionException("Ошибка удаления региона: " + e.getMessage(), e);
                 }
                 
             } catch (SQLException e) {
-                throw new CompletionException("Database error", e);
+                throw new CompletionException("Ошибка БД", e);
             }
         }, dbExecutor);
     }
     
     /**
-     * Пакетно удаляет регионы
+     * Удаляет несколько регионов сразу
      */
     public CompletableFuture<Integer> deleteRegions(Collection<UUID> regionIds) {
         if (regionIds.isEmpty()) {
@@ -302,17 +306,17 @@ public class DatabaseManager {
                     
                 } catch (SQLException e) {
                     conn.rollback();
-                    throw new CompletionException("Failed to delete regions batch: " + e.getMessage(), e);
+                    throw new CompletionException("Ошибка пакетного удаления: " + e.getMessage(), e);
                 }
                 
             } catch (SQLException e) {
-                throw new CompletionException("Database error during batch delete", e);
+                throw new CompletionException("Ошибка БД при пакетном удалении", e);
             }
         }, dbExecutor);
     }
     
     /**
-     * Получает все ID регионов в указанном мире
+     * Получает все ID регионов в мире
      */
     public CompletableFuture<List<UUID>> getRegionIdsInWorld(String worldName) {
         return CompletableFuture.supplyAsync(() -> {
@@ -334,13 +338,13 @@ public class DatabaseManager {
                 return ids;
                 
             } catch (SQLException e) {
-                throw new CompletionException("Failed to load region IDs: " + e.getMessage(), e);
+                throw new CompletionException("Ошибка загрузки ID регионов: " + e.getMessage(), e);
             }
         }, dbExecutor);
     }
     
     /**
-     * Загружает все регионы в указанном мире
+     * Загружает все регионы в мире
      */
     public CompletableFuture<List<Region>> loadRegionsInWorld(String worldName) {
         return CompletableFuture.supplyAsync(() -> {
@@ -368,7 +372,7 @@ public class DatabaseManager {
                                 regions.add(region);
                             }
                         } catch (Exception e) {
-                            plugin.getLogger().warning("Failed to deserialize region: " + e.getMessage());
+                            plugin.getLogger().warning("Ошибка десериализации региона: " + e.getMessage());
                         }
                     }
                 }
@@ -376,13 +380,13 @@ public class DatabaseManager {
                 return regions;
                 
             } catch (SQLException e) {
-                throw new CompletionException("Failed to load regions: " + e.getMessage(), e);
+                throw new CompletionException("Ошибка загрузки регионов: " + e.getMessage(), e);
             }
         }, dbExecutor);
     }
     
     /**
-     * Сохраняет все измененные регионы пакетами
+     * Сохраняет все измененные регионы
      */
     public CompletableFuture<Void> saveAllModified() {
         if (modifiedRegions.isEmpty()) {
@@ -404,7 +408,7 @@ public class DatabaseManager {
         for (int i = 0; i < batches.size(); i++) {
             List<UUID> batch = batches.get(i);
             futures[i] = saveBatch(batch).exceptionally(e -> {
-                plugin.getLogger().warning("Failed to save batch: " + e.getMessage());
+                plugin.getLogger().warning("Ошибка сохранения пакета: " + e.getMessage());
                 return null;
             });
         }
@@ -414,7 +418,7 @@ public class DatabaseManager {
     }
     
     /**
-     * Сохраняет пакет регионов в одной транзакции
+     * Сохраняет пакет регионов
      */
     private CompletableFuture<Void> saveBatch(Collection<UUID> regionIds) {
         if (regionIds.isEmpty()) {
@@ -450,17 +454,17 @@ public class DatabaseManager {
                     
                 } catch (SQLException e) {
                     conn.rollback();
-                    throw new CompletionException("Failed to save batch: " + e.getMessage(), e);
+                    throw new CompletionException("Ошибка сохранения пакета: " + e.getMessage(), e);
                 }
                 
             } catch (SQLException e) {
-                throw new CompletionException("Database error during batch save", e);
+                throw new CompletionException("Ошибка БД при пакетном сохранении", e);
             }
         }, dbExecutor);
     }
     
     /**
-     * Закрывает соединения с базой данных
+     * Закрывает соединения с БД
      */
     public void close() {
 
@@ -482,7 +486,7 @@ public class DatabaseManager {
             try {
                 ((AutoCloseable) dataSource).close();
             } catch (Exception e) {
-                plugin.getLogger().severe("Failed to close database connection: " + e.getMessage());
+                plugin.getLogger().severe("Ошибка закрытия соединения БД: " + e.getMessage());
             }
         }
     }
@@ -521,7 +525,7 @@ public class DatabaseManager {
                 }
                 pendingSaves.remove(regionId);
             }
-        }.runTaskLaterAsynchronously(plugin, delay / 50); // Преобразуем миллисекунды в тики
+        }.runTaskLaterAsynchronously(plugin, delay / 50); // мс в тики
         
         pendingSaves.put(regionId, task);
     }
@@ -543,13 +547,204 @@ public class DatabaseManager {
                 stmt.executeUpdate();
                 
             } catch (SQLException e) {
-                throw new CompletionException("Failed to save region: " + e.getMessage(), e);
+                throw new CompletionException("Ошибка сохранения региона: " + e.getMessage(), e);
             }
         }, dbExecutor);
     }
     
     /**
-     * Разделяет список на подсписки указанного размера
+     * Проверяет права игрока в регионе
+     */
+    public CompletableFuture<Boolean> hasPermission(UUID playerId, String regionName, String permission) {
+        return CompletableFuture.supplyAsync(() -> {
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT value FROM region_permissions WHERE player_id = ? AND region_name = ? AND permission = ?")) {
+                
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, regionName);
+                stmt.setString(3, permission);
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getBoolean("value");
+                    }
+                }
+                
+                // по умолчанию прав нет
+                return false;
+                
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Ошибка проверки прав: " + e.getMessage());
+                throw new CompletionException("Ошибка БД", e);
+            }
+        }, dbExecutor);
+    }
+    
+    /**
+     * Устанавливает права для игрока
+     */
+    public CompletableFuture<Void> setPermission(UUID playerId, String regionName, String permission, boolean value) {
+        return CompletableFuture.runAsync(() -> {
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT OR REPLACE INTO region_permissions (player_id, region_name, permission, value) VALUES (?, ?, ?, ?)")) {
+                
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, regionName);
+                stmt.setString(3, permission);
+                stmt.setBoolean(4, value);
+                
+                stmt.executeUpdate();
+                
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Ошибка установки прав: " + e.getMessage());
+                throw new CompletionException("Ошибка БД", e);
+            }
+        }, dbExecutor);
+    }
+    
+    /**
+     * Удаляет права игрока
+     */
+    public CompletableFuture<Void> removePermission(UUID playerId, String regionName, String permission) {
+        return CompletableFuture.runAsync(() -> {
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                     "DELETE FROM region_permissions WHERE player_id = ? AND region_name = ? AND permission = ?")) {
+                
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, regionName);
+                stmt.setString(3, permission);
+                
+                stmt.executeUpdate();
+                
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Ошибка удаления прав: " + e.getMessage());
+                throw new CompletionException("Ошибка БД", e);
+            }
+        }, dbExecutor);
+    }
+    
+    /**
+     * Получает все права игрока в регионе
+     */
+    public CompletableFuture<Set<String>> getPlayerPermissions(UUID playerId, String regionName) {
+        return CompletableFuture.supplyAsync(() -> {
+            Set<String> permissions = new HashSet<>();
+            
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT permission FROM region_permissions WHERE player_id = ? AND region_name = ?")) {
+                
+                stmt.setString(1, playerId.toString());
+                stmt.setString(2, regionName);
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        permissions.add(rs.getString("permission"));
+                    }
+                }
+                
+                return permissions;
+                
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Ошибка получения прав игрока: " + e.getMessage());
+                throw new CompletionException("Ошибка БД", e);
+            }
+        }, dbExecutor);
+    }
+    
+    /**
+     * Получает всех игроков с определенным правом
+     */
+    public CompletableFuture<Map<UUID, Boolean>> getPlayersWithPermission(String regionName, String permission) {
+        return CompletableFuture.supplyAsync(() -> {
+            Map<UUID, Boolean> players = new ConcurrentHashMap<>();
+            
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT player_id, value FROM region_permissions WHERE region_name = ? AND permission = ?")) {
+                
+                stmt.setString(1, regionName);
+                stmt.setString(2, permission);
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        players.put(UUID.fromString(rs.getString("player_id")), rs.getBoolean("value"));
+                    }
+                }
+                
+                return players;
+                
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Ошибка получения игроков с правами: " + e.getMessage());
+                throw new CompletionException("Ошибка БД", e);
+            }
+        }, dbExecutor);
+    }
+    
+    /**
+     * Получает все права для региона
+     */
+    public CompletableFuture<Map<UUID, Set<String>>> getAllRegionPermissions(String regionName) {
+        return CompletableFuture.supplyAsync(() -> {
+            Map<UUID, Set<String>> permissions = new ConcurrentHashMap<>();
+            
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT player_id, permission FROM region_permissions WHERE region_name = ?")) {
+                
+                stmt.setString(1, regionName);
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        UUID playerId = UUID.fromString(rs.getString("player_id"));
+                        String permission = rs.getString("permission");
+                        
+                        permissions.computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet()).add(permission);
+                    }
+                }
+                
+                return permissions;
+                
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Ошибка получения всех прав региона: " + e.getMessage());
+                throw new CompletionException("Ошибка БД", e);
+            }
+        }, dbExecutor);
+    }
+    
+    /**
+     * Создает таблицы для прав доступа
+     */
+    private void initializePermissionTables() {
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+            
+            // таблица прав доступа к регионам
+            stmt.execute("CREATE TABLE IF NOT EXISTS region_permissions (" +
+                "player_id VARCHAR(36) NOT NULL, " +
+                "region_name VARCHAR(64) NOT NULL, " +
+                "permission VARCHAR(64) NOT NULL, " +
+                "value BOOLEAN NOT NULL, " +
+                "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                "PRIMARY KEY (player_id, region_name, permission)" +
+            ")");
+            
+            // индексы для быстрого поиска
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_permissions_player ON region_permissions(player_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_permissions_region ON region_permissions(region_name)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_permissions_permission ON region_permissions(permission)");
+            
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Ошибка создания таблиц прав: " + e.getMessage());
+            throw new RuntimeException("Ошибка инициализации таблиц прав", e);
+        }
+    }
+    
+    /**
+     * Разбивает список на части
      */
     private <T> List<List<T>> partitionList(List<T> list, int size) {
         List<List<T>> partitions = new ArrayList<>();

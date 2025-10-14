@@ -55,8 +55,14 @@ public class SparkyLibX extends JavaPlugin {
     
     private void initializeDatabase() {
         try {
-            // TODO: Инициализировать DataSource (HikariCP или другой пул соединений)
-            DataSource dataSource = null; // Здесь должна быть инициализация пула соединений
+            // HikariCP DataSource
+            com.zaxxer.hikari.HikariConfig config = new com.zaxxer.hikari.HikariConfig();
+            config.setJdbcUrl("jdbc:sqlite:" + getDataFolder().getAbsolutePath() + "/sparkylibx.db");
+            config.setMaximumPoolSize(10);
+            config.setConnectionTimeout(30000);
+            config.setIdleTimeout(600000);
+            config.setMaxLifetime(1800000);
+            DataSource dataSource = new com.zaxxer.hikari.HikariDataSource(config);
 
             this.databaseManager = new DatabaseManager(this, dataSource);
         } catch (Exception e) {

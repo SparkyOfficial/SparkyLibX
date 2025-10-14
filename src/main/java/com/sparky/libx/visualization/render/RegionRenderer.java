@@ -1,9 +1,10 @@
 package com.sparky.libx.visualization.render;
 
-import com.sparky.libx.region.Region;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
+
+import com.sparky.libx.region.Region;
 
 /**
  * Базовый интерфейс для рендереров регионов
@@ -24,8 +25,23 @@ public interface RegionRenderer {
      * Проверяет, виден ли регион из указанной позиции
      */
     default boolean isVisibleFrom(Region region, Location viewPoint) {
-        // TODO: Реализовать проверку видимости региона
-        return true;
+        // находятся ли регион и точка просмотра в одном мире
+        if (!region.getWorld().equals(viewPoint.getWorld())) {
+            return false;
+        }
+        
+        // получаение центра региона
+        Location center = region.getCenter();
+        
+        // ограничение в 128 блоков для производительности
+        if (viewPoint.distanceSquared(center) > 128 * 128) {
+            return false;
+        }
+        
+        // rayTraceBlocks для проверки преград
+        Vector direction = center.toVector().subtract(viewPoint.toVector()).normalize();
+        return viewPoint.getWorld().rayTraceBlocks(viewPoint, direction, 128, 
+            org.bukkit.FluidCollisionMode.NEVER, true) == null;
     }
     
     /**

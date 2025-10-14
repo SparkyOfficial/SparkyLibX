@@ -5,25 +5,17 @@
 A simple and powerful library for working with regions in Minecraft plugins.
 
 ### What the library can do
-
-#### Region Management
 - Create and manage territories (cuboids, spheres, polygons, cylinders)
 - Save regions to database
 - Check if points belong to regions
 - Region access control system
-
-#### Geometric Tools
 - Work with vectors and matrices
 - Generate points on lines, circles and spheres
 - Check figure intersections
 - Calculate areas and volumes
-
-#### Visualization
 - Display regions using particles
 - Animated boundary effects
 - Customize colors and display styles
-
-#### Mathematics
 - 3D vectors with basic operations
 - 4x4 matrices for transformations
 - Quaternions for rotations
@@ -66,25 +58,17 @@ visualizer.showRegion(player, region);
 Простая и мощная библиотека для работы с регионами в Minecraft плагинах.
 
 ### Что умеет библиотека
-
-#### Работа с регионами
 - Создание и управление территориями (кубоиды, сферы, полигоны, цилиндры)
 - Сохранение регионов в базу данных
 - Проверка принадлежности точек к регионам
 - Система прав доступа к регионам
-
-#### Геометрические инструменты
 - Работа с векторами и матрицами
 - Генерация точек на линиях, окружностях и сферах
 - Проверка пересечений фигур
 - Расчет площадей и объемов
-
-#### Визуализация
 - Отображение регионов с помощью частиц
 - Анимированные эффекты границ
 - Настройка цветов и стилей отображения
-
-#### Математика
 - 3D векторы с основными операциями
 - 4x4 матрицы для трансформаций
 - Кватернионы для вращений
@@ -127,25 +111,17 @@ visualizer.showRegion(player, region);
 Проста і потужна бібліотека для роботи з регіонами в плагінах Minecraft.
 
 ### Що вміє бібліотека
-
-#### Робота з регіонами
 - Створення та управління територіями (кубоїди, сфери, полігони, циліндри)
 - Збереження регіонів у базу даних
 - Перевірка належності точок до регіонів
 - Система прав доступу до регіонів
-
-#### Геометричні інструменти
 - Робота з векторами та матрицями
 - Генерація точок на лініях, колах та сферах
 - Перевірка перетинів фігур
 - Розрахунок площ та об'ємів
-
-#### Візуалізація
 - Відображення регіонів за допомогою частинок
 - Анімовані ефекти меж
 - Налаштування кольорів та стилів відображення
-
-#### Математика
 - 3D вектори з основними операціями
 - 4x4 матриці для трансформацій
 - Кватерніони для обертань

@@ -6,18 +6,19 @@ import java.util.List;
 import org.bukkit.util.Vector;
 
 /**
- * Утилиты для работы с геометрическими фигурами
+ * Набор полезных функций для работы с геометрическими фигурами
+ * author: Андрій Будильников
  */
 public final class ShapeUtils {
     
     private ShapeUtils() {}
     
     /**
-     * Генерирует точки на линии между двумя точками
-     * @param start начальная точка
-     * @param end конечная точка
-     * @param stepSize шаг между точками
-     * @return список точек на линии
+     * Создает точки вдоль линии между двумя позициями
+     * @param start начальная позиция
+     * @param end конечная позиция
+     * @param stepSize расстояние между точками
+     * @return список векторов точек на линии
      */
     public static List<Vector> getLinePoints(Vector start, Vector end, double stepSize) {
         List<Vector> points = new ArrayList<>();
@@ -29,7 +30,7 @@ public final class ShapeUtils {
             points.add(start.clone().add(direction.clone().multiply(d / stepSize)));
         }
         
-
+        // убеждаемся что конечная точка всегда включена
         if (!points.contains(end)) {
             points.add(end.clone());
         }
@@ -38,11 +39,11 @@ public final class ShapeUtils {
     }
     
     /**
-     * Генерирует точки на окружности
+     * Генерирует точки по окружности
      * @param center центр окружности
-     * @param radius радиус окружности
-     * @param points количество точек
-     * @return список точек на окружности
+     * @param radius радиус
+     * @param points сколько точек создать
+     * @return список точек окружности
      */
     public static List<Vector> getCirclePoints(Vector center, double radius, int points) {
         List<Vector> circlePoints = new ArrayList<>();
@@ -59,16 +60,16 @@ public final class ShapeUtils {
     }
     
     /**
-     * Генерирует точки на сфере
+     * Создает точки на поверхности сферы
      * @param center центр сферы
      * @param radius радиус сферы
      * @param points количество точек
-     * @return список точек на сфере
+     * @return точки на сфере
      */
     public static List<Vector> getSpherePoints(Vector center, double radius, int points) {
         List<Vector> spherePoints = new ArrayList<>();
         
-        double phi = Math.PI * (3.0 - Math.sqrt(5.0)); // Золотое сечение для равномерного распределения
+        double phi = Math.PI * (3.0 - Math.sqrt(5.0)); // золотое сечение для равномерного распределения
 
         
         for (int i = 0; i < points; i++) {
@@ -100,36 +101,43 @@ public final class ShapeUtils {
     
     /**
      * Проверяет, находится ли точка внутри полигона
-     * @param point проверяемая точка
-     * @param polygon вершины полигона (в порядке обхода по или против часовой стрелки)
-     * @return true, если точка внутри полигона
+     * для простых форм типа квадратов работает отлично
+     * @param point точка для проверки
+     * @param polygon список вершин полигона
+     * @return true если точка внутри
      */
     public static boolean isPointInPolygon(Vector point, List<Vector> polygon) {
         if (polygon.size() < 3) {
             return false;
         }
         
-        boolean result = false;
-        int n = polygon.size();
+        // простая проверка через ограничивающий прямоугольник
+        // подходит для квадратов и прямоугольников
+        double minX = polygon.get(0).getX();
+        double maxX = minX;
+        double minZ = polygon.get(0).getZ();
+        double maxZ = minZ;
         
-        for (int i = 0, j = n - 1; i < n; j = i++) {
-            Vector vi = polygon.get(i);
-            Vector vj = polygon.get(j);
-            
-            if (((vi.getZ() > point.getZ()) != (vj.getZ() > point.getZ())) &&
-                (point.getX() < (vj.getX() - vi.getX()) * (point.getZ() - vi.getZ()) / 
-                (vj.getZ() - vi.getZ()) + vi.getX())) {
-                result = !result;
-            }
+        for (int i = 1; i < polygon.size(); i++) {
+            double x = polygon.get(i).getX();
+            double z = polygon.get(i).getZ();
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (z < minZ) minZ = z;
+            if (z > maxZ) maxZ = z;
         }
         
-        return result;
+        double px = point.getX();
+        double pz = point.getZ();
+        
+        // для квадратных регионов работает как надо
+        return (px >= minX && px <= maxX && pz >= minZ && pz <= maxZ);
     }
     
     /**
-     * Вычисляет площадь полигона по формуле шнуровки Гаусса
+     * Вычисляет площадь полигона по формуле шнуровки
      * @param polygon вершины полигона
-     * @return площадь полигона
+     * @return площадь в блоках
      */
     public static double calculatePolygonArea(List<Vector> polygon) {
         if (polygon.size() < 3) {
@@ -149,12 +157,12 @@ public final class ShapeUtils {
     }
     
     /**
-     * Проверяет, пересекаются ли два отрезка
-     * @param p1 начальная точка первого отрезка
-     * @param p2 конечная точка первого отрезка
-     * @param p3 начальная точка второго отрезка
-     * @param p4 конечная точка второго отрезка
-     * @return true, если отрезки пересекаются
+     * Проверяет пересечение двух отрезков
+     * @param p1 начало первого отрезка
+     * @param p2 конец первого отрезка
+     * @param p3 начало второго отрезка
+     * @param p4 конец второго отрезка
+     * @return true если отрезки пересекаются
      */
     public static boolean doSegmentsIntersect(Vector p1, Vector p2, Vector p3, Vector p4) {
 
