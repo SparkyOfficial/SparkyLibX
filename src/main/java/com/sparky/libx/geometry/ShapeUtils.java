@@ -1,13 +1,9 @@
 package com.sparky.libx.geometry;
 
-import com.sparky.libx.math.Vector3D;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.util.Vector;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.bukkit.util.Vector;
 
 /**
  * Утилиты для работы с геометрическими фигурами
@@ -72,7 +68,7 @@ public final class ShapeUtils {
     public static List<Vector> getSpherePoints(Vector center, double radius, int points) {
         List<Vector> spherePoints = new ArrayList<>();
         
-
+        double phi = Math.PI * (3.0 - Math.sqrt(5.0)); // Золотое сечение для равномерного распределения
 
         
         for (int i = 0; i < points; i++) {
@@ -185,9 +181,9 @@ public final class ShapeUtils {
     private static int orientation(Vector p, Vector q, Vector r) {
         double val = (q.getZ() - p.getZ()) * (r.getX() - q.getX()) - 
                     (q.getX() - p.getX()) * (r.getZ() - q.getZ());
-                    
-
-
+        
+        if (val == 0) return 0;
+        return (val > 0) ? 1 : 2;
     }
     
 

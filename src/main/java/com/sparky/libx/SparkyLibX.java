@@ -1,11 +1,12 @@
 package com.sparky.libx;
 
+import javax.sql.DataSource;
+
+import org.bukkit.plugin.java.JavaPlugin;
+
 import com.sparky.libx.region.RegionManager;
 import com.sparky.libx.storage.DatabaseManager;
 import com.sparky.libx.visualization.RegionVisualizationManager;
-import org.bukkit.plugin.java.JavaPlugin;
-
-import javax.sql.DataSource;
 
 /**
  * Главный класс плагина SparkyLibX
@@ -54,7 +55,8 @@ public class SparkyLibX extends JavaPlugin {
     
     private void initializeDatabase() {
         try {
-
+            // TODO: Инициализировать DataSource (HikariCP или другой пул соединений)
+            DataSource dataSource = null; // Здесь должна быть инициализация пула соединений
 
             this.databaseManager = new DatabaseManager(this, dataSource);
         } catch (Exception e) {

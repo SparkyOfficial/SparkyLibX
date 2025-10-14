@@ -1,16 +1,27 @@
 package com.sparky.libx.visualization;
 
-import com.sparky.libx.region.Region;
-import org.bukkit.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.sparky.libx.region.Region;
 
 /**
  * Система визуализации регионов с помощью частиц
+ * @author Андрій Будильников
  */
 public class RegionVisualizer {
     
@@ -22,9 +33,9 @@ public class RegionVisualizer {
         registerStyle("default", new VisualizationStyle(
             Particle.REDSTONE,
             new Particle.DustOptions(Color.RED, 1.0f),
-
-
-
+            0.5,
+            5,
+            0
         ));
         
         registerStyle("selection", new VisualizationStyle(
@@ -180,9 +191,8 @@ public class RegionVisualizer {
                     player.spawnParticle(
                         style.getParticle(),
                         particleLoc,
-                        1, 0, 0, 0, 0,
-                        style.getParticleData(),
-                        true
+                        1,
+                        style.getParticleData()
                     );
                 }
             }
@@ -311,17 +321,17 @@ public class RegionVisualizer {
                 double x = 0, y = 0, z = 0;
                 
                 switch (axis) {
-
+                    case 0: // XY plane
                         x = Math.cos(angle) * radius;
                         y = Math.sin(angle) * radius;
                         z = 0;
                         break;
-
+                    case 1: // XZ plane
                         x = Math.cos(angle) * radius;
                         z = Math.sin(angle) * radius;
                         y = 0;
                         break;
-
+                    case 2: // YZ plane
                         y = Math.cos(angle) * radius;
                         z = Math.sin(angle) * radius;
                         x = 0;

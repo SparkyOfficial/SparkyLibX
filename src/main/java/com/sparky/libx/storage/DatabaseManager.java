@@ -1,18 +1,36 @@
 package com.sparky.libx.storage;
 
-import com.sparky.libx.region.Region;
-import com.sparky.libx.storage.RegionSerializer;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.sql.DataSource;
+
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import javax.sql.DataSource;
-import java.sql.*;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import com.sparky.libx.region.Region;
 
 /**
  * Менеджер для асинхронной работы с базой данных
@@ -41,13 +59,13 @@ public class DatabaseManager {
         this.plugin = plugin;
         this.dataSource = dataSource;
         
-
+        // Создаем пул потоков для операций с базой данных
         int poolSize = Math.max(4, Runtime.getRuntime().availableProcessors());
         this.dbExecutor = new ThreadPoolExecutor(
-
-
-
-
+            2, // Минимальное количество потоков
+            poolSize, // Максимальное количество потоков
+            60L, TimeUnit.SECONDS, // Время простоя потока перед умиранием
+            new LinkedBlockingQueue<>(1000), // Очередь задач
             new ThreadFactory() {
                 private final AtomicInteger counter = new AtomicInteger(0);
                 
@@ -59,19 +77,19 @@ public class DatabaseManager {
                     return t;
                 }
             },
-
+            new ThreadPoolExecutor.CallerRunsPolicy() // Если очередь переполнена, выполняем в вызывающем потоке
         );
         
-
+        // Инициализируем базу данных
         initializeDatabase();
         
-
+        // Запускаем периодическое сохранение
         new BukkitRunnable() {
             @Override
             public void run() {
                 saveAllModified();
             }
-
+        }.runTaskTimerAsynchronously(plugin, 6000, 6000); // Каждые 5 минут
     }
     
     /**
@@ -503,7 +521,7 @@ public class DatabaseManager {
                 }
                 pendingSaves.remove(regionId);
             }
-
+        }.runTaskLaterAsynchronously(plugin, delay / 50); // Преобразуем миллисекунды в тики
         
         pendingSaves.put(regionId, task);
     }

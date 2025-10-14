@@ -1,14 +1,13 @@
 package com.sparky.libx.geometry;
 
-import com.sparky.libx.math.Vector3D;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.util.Vector;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Класс для работы с лучами в 3D пространстве
@@ -51,6 +50,7 @@ public class Ray {
         if (world == null) return null;
         
         Vector currentPos = origin.clone();
+        Vector step = direction.clone().multiply(0.1); // Малый шаг для точности
 
         
         Block lastBlock = null;
@@ -95,6 +95,7 @@ public class Ray {
         if (world == null) return blocks;
         
         Vector currentPos = origin.clone();
+        Vector step = direction.clone().multiply(0.5); // Больший шаг для производительности
 
         
         Block lastBlock = null;

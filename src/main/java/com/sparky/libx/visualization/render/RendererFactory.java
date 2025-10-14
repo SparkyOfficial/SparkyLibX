@@ -47,6 +47,7 @@ public class RendererFactory {
         
         double density = config.getDouble("density", 0.2);
         int particlesPerTick = config.getInt("particles-per-tick", 10);
+        int duration = config.getInt("duration", 0);
 
         
         return new ParticleRenderer(particle, particleData, density, particlesPerTick, duration);
@@ -64,6 +65,7 @@ public class RendererFactory {
         
 
         boolean wireframe = config.getBoolean("wireframe", false);
+        int duration = config.getInt("duration", 0);
         
         return new BlockRenderer(material, duration, wireframe);
     }
@@ -75,9 +77,9 @@ public class RendererFactory {
         return new ParticleRenderer(
             Particle.VILLAGER_HAPPY,
             new Particle.DustOptions(Color.LIME, 1.5f),
-
-
-
+            0.2,
+            2,
+            40
         );
     }
     
@@ -88,9 +90,9 @@ public class RendererFactory {
         return new ParticleRenderer(
             Particle.REDSTONE,
             new Particle.DustOptions(Color.RED, 1.0f),
-
-
-
+            0.5,
+            5,
+            0
         );
     }
 }
