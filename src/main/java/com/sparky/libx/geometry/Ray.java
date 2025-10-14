@@ -4,6 +4,7 @@ import com.sparky.libx.math.Vector3D;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import java.util.List;
 
 /**
  * Класс для работы с лучами в 3D пространстве
+ * @author Андрій Будильников
  */
 public class Ray {
     private final Vector origin;
@@ -49,7 +51,7 @@ public class Ray {
         if (world == null) return null;
         
         Vector currentPos = origin.clone();
-        Vector step = direction.clone().multiply(0.1); // Малый шаг для точности
+
         
         Block lastBlock = null;
         double distance = 0;
@@ -60,14 +62,14 @@ public class Ray {
             
             Block block = currentPos.toLocation(world).getBlock();
             
-            // Пропускаем проверку, если блок не изменился
+
             if (block.equals(lastBlock)) continue;
             
             lastBlock = block;
             
-            // Проверяем, является ли блок твердым
+
             if (block.getType().isSolid() && (!ignoreTransparent || !block.isPassable())) {
-                // Вычисляем точное местоположение пересечения
+
                 Vector hitPoint = getExactIntersectionPoint(block, currentPos);
                 if (hitPoint != null) {
                     return new RayHit(
@@ -93,7 +95,7 @@ public class Ray {
         if (world == null) return blocks;
         
         Vector currentPos = origin.clone();
-        Vector step = direction.clone().multiply(0.5); // Больший шаг для производительности
+
         
         Block lastBlock = null;
         double distance = 0;
@@ -104,7 +106,7 @@ public class Ray {
             
             Block block = currentPos.toLocation(world).getBlock();
             
-            // Добавляем только уникальные блоки
+
             if (!block.equals(lastBlock)) {
                 blocks.add(block);
                 lastBlock = block;
@@ -118,8 +120,8 @@ public class Ray {
      * Вычисляет точное местоположение пересечения с блоком
      */
     private Vector getExactIntersectionPoint(Block block, Vector approxPosition) {
-        // Упрощенная реализация - возвращаем примерное положение
-        // Более точная реализация потребует проверки пересечений с гранями куба
+
+
         return approxPosition.clone();
     }
     
@@ -129,7 +131,7 @@ public class Ray {
     private BlockFace getHitFace(Vector hitPoint, Vector blockCenter) {
         Vector relativeHit = hitPoint.clone().subtract(blockCenter);
         
-        // Находим грань с максимальным отклонением
+
         double max = Math.max(Math.max(
             Math.abs(relativeHit.getX()),
             Math.abs(relativeHit.getY())),

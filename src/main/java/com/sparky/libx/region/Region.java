@@ -67,7 +67,7 @@ public abstract class Region implements ConfigurationSerializable {
     public static Region deserialize(Map<String, Object> args) {
         String type = (String) args.get("type");
         
-        // В зависимости от типа региона вызываем соответствующий метод десериализации
+
         switch (type.toLowerCase()) {
             case "cuboid":
                 return CuboidRegion.deserialize(args);

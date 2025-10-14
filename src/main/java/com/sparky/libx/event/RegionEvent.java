@@ -64,8 +64,8 @@ public class RegionEvent extends Event implements Cancellable {
      * Тип действия с регионом
      */
     public enum RegionAction {
-        ENTER,   // Игрок вошел в регион
-        LEAVE,   // Игрок вышел из региона
-        INTERACT // Игрок взаимодействует с регионом
+
+
+
     }
 }

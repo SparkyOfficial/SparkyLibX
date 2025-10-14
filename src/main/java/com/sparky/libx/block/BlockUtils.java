@@ -127,7 +127,7 @@ public final class BlockUtils {
     public static List<Block> getAdjacentBlocks(Block block, boolean includeDiagonals) {
         List<Block> blocks = new ArrayList<>();
         
-        // Основные направления (север, юг, запад, восток, верх, низ)
+
         blocks.add(block.getRelative(BlockFace.UP));
         blocks.add(block.getRelative(BlockFace.DOWN));
         blocks.add(block.getRelative(BlockFace.NORTH));
@@ -136,13 +136,13 @@ public final class BlockUtils {
         blocks.add(block.getRelative(BlockFace.EAST));
         
         if (includeDiagonals) {
-            // Угловые блоки
+
             blocks.add(block.getRelative(BlockFace.NORTH_EAST));
             blocks.add(block.getRelative(BlockFace.NORTH_WEST));
             blocks.add(block.getRelative(BlockFace.SOUTH_EAST));
             blocks.add(block.getRelative(BlockFace.SOUTH_WEST));
             
-            // Верхние угловые блоки
+
             Block up = block.getRelative(BlockFace.UP);
             blocks.add(up.getRelative(BlockFace.NORTH));
             blocks.add(up.getRelative(BlockFace.SOUTH));
@@ -153,7 +153,7 @@ public final class BlockUtils {
             blocks.add(up.getRelative(BlockFace.SOUTH_EAST));
             blocks.add(up.getRelative(BlockFace.SOUTH_WEST));
             
-            // Нижние угловые блоки
+
             Block down = block.getRelative(BlockFace.DOWN);
             blocks.add(down.getRelative(BlockFace.NORTH));
             blocks.add(down.getRelative(BlockFace.SOUTH));
@@ -181,13 +181,13 @@ public final class BlockUtils {
             return false;
         }
         
-        // Проверяем расстояние
+
         Location blockCenter = block.getLocation().add(0.5, 0.5, 0.5);
         if (viewerLocation.distance(blockCenter) > maxDistance) {
             return false;
         }
         
-        // Проверяем, не закрыт ли блок другими блоками
+
         return viewerLocation.getWorld().rayTraceBlocks(viewerLocation, 
             blockCenter.toVector().subtract(viewerLocation.toVector()).normalize(), 
             maxDistance) == null;

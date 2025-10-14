@@ -12,7 +12,7 @@ public class Matrix4x4 {
      */
     public Matrix4x4() {
         matrix = new double[4][4];
-        // Создаем единичную матрицу
+
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 matrix[i][j] = (i == j) ? 1.0 : 0.0;
@@ -169,7 +169,7 @@ public class Matrix4x4 {
         return sb.toString();
     }
     
-    // Геттеры и сеттеры
+
     public double get(int row, int col) {
         if (row < 0 || row >= 4 || col < 0 || col >= 4) {
             throw new IndexOutOfBoundsException("Индексы должны быть в диапазоне [0, 3]");

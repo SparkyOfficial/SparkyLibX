@@ -33,7 +33,7 @@ public final class ShapeUtils {
             points.add(start.clone().add(direction.clone().multiply(d / stepSize)));
         }
         
-        // Убедимся, что конечная точка включена
+
         if (!points.contains(end)) {
             points.add(end.clone());
         }
@@ -72,24 +72,24 @@ public final class ShapeUtils {
     public static List<Vector> getSpherePoints(Vector center, double radius, int points) {
         List<Vector> spherePoints = new ArrayList<>();
         
-        // Используем золотое сечение для равномерного распределения точек
-        double phi = Math.PI * (3.0 - Math.sqrt(5.0)); // золотой угол в радианах
+
+
         
         for (int i = 0; i < points; i++) {
-            // y изменяется от 1 до -1
+
             double y = 1 - (i / (double) (points - 1)) * 2;
             
-            // радиус на этой высоте
+
             double radiusAtY = Math.sqrt(1 - y * y);
             
-            // золотой угол
+
             double theta = phi * i;
             
-            // вычисляем x, y, z
+
             double x = Math.cos(theta) * radiusAtY;
             double z = Math.sin(theta) * radiusAtY;
             
-            // масштабируем и сдвигаем в центр
+
             Vector point = new Vector(
                 center.getX() + x * radius,
                 center.getY() + y * radius,
@@ -161,18 +161,18 @@ public final class ShapeUtils {
      * @return true, если отрезки пересекаются
      */
     public static boolean doSegmentsIntersect(Vector p1, Vector p2, Vector p3, Vector p4) {
-        // Вычисляем ориентации
+
         int o1 = orientation(p1, p2, p3);
         int o2 = orientation(p1, p2, p4);
         int o3 = orientation(p3, p4, p1);
         int o4 = orientation(p3, p4, p2);
         
-        // Общий случай пересечения
+
         if (o1 != o2 && o3 != o4) {
             return true;
         }
         
-        // Частные случаи коллинеарности
+
         if (o1 == 0 && onSegment(p1, p3, p2)) return true;
         if (o2 == 0 && onSegment(p1, p4, p2)) return true;
         if (o3 == 0 && onSegment(p3, p1, p4)) return true;
@@ -181,16 +181,16 @@ public final class ShapeUtils {
         return false;
     }
     
-    // Вспомогательный метод для определения ориентации трех точек
+
     private static int orientation(Vector p, Vector q, Vector r) {
         double val = (q.getZ() - p.getZ()) * (r.getX() - q.getX()) - 
                     (q.getX() - p.getX()) * (r.getZ() - q.getZ());
                     
-        if (val == 0) return 0;  // коллинеарны
-        return (val > 0) ? 1 : 2; // по или против часовой стрелки
+
+
     }
     
-    // Вспомогательный метод для проверки нахождения точки на отрезке
+
     private static boolean onSegment(Vector p, Vector q, Vector r) {
         return q.getX() <= Math.max(p.getX(), r.getX()) && 
                q.getX() >= Math.min(p.getX(), r.getX()) &&

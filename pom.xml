@@ -45,6 +45,13 @@
             <version>3.6.1</version>
         </dependency>
         
+        <!-- HikariCP for database connection pooling -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.0.1</version>
+        </dependency>
+        
         <!-- JUnit for testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -81,6 +88,10 @@
                                 <relocation>
                                     <pattern>org.apache.commons.math3</pattern>
                                     <shadedPattern>com.sparky.libx.shaded.apache.commons.math3</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.zaxxer.hikari</pattern>
+                                    <shadedPattern>com.sparky.libx.shaded.hikari</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
