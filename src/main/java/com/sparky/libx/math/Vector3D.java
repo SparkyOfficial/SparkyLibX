@@ -98,12 +98,83 @@ public class Vector3D {
     }
     
     /**
+     * Вычитает другой вектор из этого вектора
+     * @param other другой вектор
+     * @return результат вычитания векторов
+     */
+    public Vector3D subtract(Vector3D other) {
+        return new Vector3D(x - other.x, y - other.y, z - other.z);
+    }
+    
+    /**
+     * Умножает этот вектор на скаляр
+     * @param scalar скаляр
+     * @return результат умножения вектора на скаляр
+     */
+    public Vector3D multiply(double scalar) {
+        return new Vector3D(x * scalar, y * scalar, z * scalar);
+    }
+    
+    /**
+     * Делит этот вектор на скаляр
+     * @param scalar скаляр
+     * @return результат деления вектора на скаляр
+     */
+    public Vector3D divide(double scalar) {
+        if (scalar == 0) {
+            throw new IllegalArgumentException("Невозможно разделить на ноль");
+        }
+        return new Vector3D(x / scalar, y / scalar, z / scalar);
+    }
+    
+    /**
      * Вычисляет скалярное произведение этого вектора с другим вектором
      * @param other другой вектор
      * @return скалярное произведение
      */
     public double dot(Vector3D other) {
         return x * other.x + y * other.y + z * other.z;
+    }
+    
+    /**
+     * Вычисляет векторное произведение этого вектора с другим вектором
+     * @param other другой вектор
+     * @return векторное произведение
+     */
+    public Vector3D cross(Vector3D other) {
+        return new Vector3D(
+            y * other.z - z * other.y,
+            z * other.x - x * other.z,
+            x * other.y - y * other.x
+        );
+    }
+    
+    /**
+     * Вычисляет квадрат магнитуды (длины) вектора
+     * @return квадрат магнитуды вектора
+     */
+    public double magnitudeSquared() {
+        return x * x + y * y + z * z;
+    }
+    
+    /**
+     * Вычисляет магнитуду (длину) вектора
+     * @return магнитуда вектора
+     */
+    public double magnitude() {
+        return Math.sqrt(magnitudeSquared());
+    }
+    
+    /**
+     * Нормализует этот вектор (делает его единичной длины)
+     * @return нормализованный вектор
+     */
+    public Vector3D normalize() {
+        double mag = magnitude();
+        if (mag == 0) {
+            return new Vector3D(0, 0, 0);
+        }
+        return divide(mag);
     }
     
     /**
