@@ -471,6 +471,26 @@ public class Cryptography {
     }
     
     /**
+     * згенерувати пару ключів
+     * @return пара ключів
+     */
+    public static String generateKeyPair() {
+        // Для демонстрації повертаємо фіксовану пару ключів
+        return "public_key:private_key";
+    }
+    
+    /**
+     * підписати повідомлення
+     * @param message повідомлення
+     * @param privateKey приватний ключ
+     * @return підпис
+     */
+    public static String sign(String message, String privateKey) {
+        // Для демонстрації просто повертаємо хеш повідомлення
+        return sha256(message + privateKey);
+    }
+    
+    /**
      * хешувати пароль з сіллю
      * @param password пароль
      * @param salt сіль

@@ -192,6 +192,77 @@ public class Quaternion {
         return angles;
     }
     
+    /**
+     * Преобразует кватернион в матрицу вращения
+     */
+    public Matrix4x4 toRotationMatrix() {
+        double xx = x * x;
+        double xy = x * y;
+        double xz = x * z;
+        double xw = x * w;
+        double yy = y * y;
+        double yz = y * z;
+        double yw = y * w;
+        double zz = z * z;
+        double zw = z * w;
+        
+        Matrix4x4 matrix = Matrix4x4.identity();
+        matrix.set(0, 0, 1 - 2 * (yy + zz));
+        matrix.set(0, 1, 2 * (xy - zw));
+        matrix.set(0, 2, 2 * (xz + yw));
+        matrix.set(1, 0, 2 * (xy + zw));
+        matrix.set(1, 1, 1 - 2 * (xx + zz));
+        matrix.set(1, 2, 2 * (yz - xw));
+        matrix.set(2, 0, 2 * (xz - yw));
+        matrix.set(2, 1, 2 * (yz + xw));
+        matrix.set(2, 2, 1 - 2 * (xx + yy));
+        
+        return matrix;
+    }
+    
+    /**
+     * Интегрирует угловую скорость за заданный промежуток времени
+     */
+    public Quaternion integrate(Vector3D angularVelocity, double dt) {
+        // Преобразуем угловую скорость в кватернион
+        Quaternion delta = new Quaternion(0, 
+            angularVelocity.getX() * dt * 0.5,
+            angularVelocity.getY() * dt * 0.5,
+            angularVelocity.getZ() * dt * 0.5);
+        
+        // Интегрируем кватернион
+        Quaternion result = this.add(this.multiply(delta));
+        return result.normalize();
+    }
+    
+    /**
+     * Вычисляет угол между этим кватернионом и другим
+     */
+    public double angleTo(Quaternion other) {
+        double dot = this.w * other.w + this.x * other.x + this.y * other.y + this.z * other.z;
+        return Math.acos(2 * dot * dot - 1);
+    }
+    
+    /**
+     * Вычисляет ось вращения между этим кватернионом и другим
+     */
+    public Vector3D rotationAxisTo(Quaternion other) {
+        // Преобразуем кватернион в вектор оси вращения
+        Quaternion relative = other.multiply(this.inverse());
+        double angle = 2 * Math.acos(relative.getW());
+        double sinAngle = Math.sin(angle / 2);
+        
+        if (sinAngle < 1e-10) {
+            return new Vector3D(1, 0, 0); // Произвольная ось, если угол близок к нулю
+        }
+        
+        return new Vector3D(
+            relative.getX() / sinAngle,
+            relative.getY() / sinAngle,
+            relative.getZ() / sinAngle
+        ).normalize();
+    }
+    
     public double getW() { return w; }
     public double getX() { return x; }
     public double getY() { return y; }

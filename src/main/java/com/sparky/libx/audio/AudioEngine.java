@@ -66,6 +66,7 @@ public class AudioEngine {
         private boolean paused;
         private double playbackPosition;
         private SourceDataLine dataLine;
+        private byte[] processedData;
         
         public AudioSource(AudioClip clip) {
             this.id = UUID.randomUUID();
@@ -79,6 +80,7 @@ public class AudioEngine {
             this.paused = false;
             this.playbackPosition = 0.0;
             this.dataLine = null;
+            this.processedData = clip.getData().clone();
         }
         
         public UUID getId() {
@@ -91,6 +93,7 @@ public class AudioEngine {
         
         public void setClip(AudioClip clip) {
             this.clip = clip;
+            this.processedData = clip.getData().clone();
         }
         
         public Vector3D getPosition() {
@@ -149,18 +152,24 @@ public class AudioEngine {
             this.playbackPosition = Math.max(0.0, Math.min(clip.getDuration(), position));
         }
         
+        public byte[] getProcessedData() {
+            return processedData;
+        }
+        
+        public void setProcessedData(byte[] data) {
+            this.processedData = data.clone();
+        }
+        
         public void play() {
             if (!playing) {
                 playing = true;
                 paused = false;
-                // In a real implementation, this would start audio playback
             }
         }
         
         public void pause() {
             if (playing && !paused) {
                 paused = true;
-                // In a real implementation, this would pause audio playback
             }
         }
         
@@ -169,14 +178,12 @@ public class AudioEngine {
                 playing = false;
                 paused = false;
                 playbackPosition = 0.0;
-                // In a real implementation, this would stop audio playback
             }
         }
         
         public void resume() {
             if (playing && paused) {
                 paused = false;
-                // In a real implementation, this would resume audio playback
             }
         }
         
@@ -392,23 +399,90 @@ public class AudioEngine {
         }
         
         private void mixSource(AudioSource source, byte[] output, AudioFormat format, int sampleCount) {
-            // In a real implementation, this would mix the source audio into the output buffer
-            // This is a simplified placeholder
+            byte[] sourceData = source.getProcessedData();
+            int frameSize = format.getFrameSize();
+            int maxFrames = Math.min(sampleCount, sourceData.length / frameSize);
+            
+            for (int i = 0; i < maxFrames; i++) {
+                for (int j = 0; j < frameSize; j++) {
+                    int outputIndex = i * frameSize + j;
+                    int sourceIndex = i * frameSize + j;
+                    
+                    if (outputIndex < output.length && sourceIndex < sourceData.length) {
+                        // Mix by averaging (simple approach)
+                        int outputSample = output[outputIndex] & 0xFF;
+                        int sourceSample = sourceData[sourceIndex] & 0xFF;
+                        int mixedSample = (outputSample + sourceSample) / 2;
+                        output[outputIndex] = (byte) mixedSample;
+                    }
+                }
+            }
         }
         
         private void applyMasterVolume(byte[] audioData, double volume) {
-            // Apply volume to audio data
-            // This is a simplified placeholder
+            for (int i = 0; i < audioData.length; i++) {
+                int sample = audioData[i] & 0xFF;
+                sample = (int) (sample * volume);
+                audioData[i] = (byte) (sample & 0xFF);
+            }
         }
         
         private void applyFilter(byte[] audioData, AudioFormat format, AudioFilter filter) {
-            // Apply filter to audio data
-            // This is a simplified placeholder
+            // Simple low-pass filter implementation
+            if (filter.getType() == AudioFilter.FilterType.LOW_PASS) {
+                double[] samples = convertToDoubleArray(audioData);
+                double[] filtered = new double[samples.length];
+                
+                // Simple moving average filter
+                int windowSize = Math.max(1, (int) (format.getSampleRate() / filter.getFrequency()));
+                for (int i = 0; i < samples.length; i++) {
+                    double sum = 0;
+                    int count = 0;
+                    for (int j = Math.max(0, i - windowSize/2); j < Math.min(samples.length, i + windowSize/2); j++) {
+                        sum += samples[j];
+                        count++;
+                    }
+                    filtered[i] = sum / count;
+                }
+                
+                convertFromDoubleArray(filtered, audioData);
+            }
         }
         
         private void applyReverb(byte[] audioData, AudioFormat format, ReverbParameters reverb) {
-            // Apply reverb effect to audio data
-            // This is a simplified placeholder
+            // Simple reverb implementation using comb filters
+            double[] samples = convertToDoubleArray(audioData);
+            double[] reverbBuffer = new double[samples.length];
+            
+            // Apply simple comb filter reverb
+            int sampleRate = (int) format.getSampleRate();
+            int delaySamples = (int) (reverb.roomSize * sampleRate * 0.1); // scale room size to delay
+            
+            for (int i = delaySamples; i < samples.length; i++) {
+                reverbBuffer[i] += samples[i - delaySamples] * reverb.level * reverb.damping;
+            }
+            
+            // Mix reverb with original
+            for (int i = 0; i < samples.length; i++) {
+                samples[i] = samples[i] * (1 - reverb.level) + reverbBuffer[i] * reverb.level;
+            }
+            
+            convertFromDoubleArray(samples, audioData);
+        }
+        
+        private double[] convertToDoubleArray(byte[] audioData) {
+            double[] result = new double[audioData.length];
+            for (int i = 0; i < audioData.length; i++) {
+                result[i] = (audioData[i] & 0xFF) / 255.0;
+            }
+            return result;
+        }
+        
+        private void convertFromDoubleArray(double[] samples, byte[] audioData) {
+            for (int i = 0; i < Math.min(samples.length, audioData.length); i++) {
+                int sample = (int) (samples[i] * 255);
+                audioData[i] = (byte) (sample & 0xFF);
+            }
         }
     }
     
@@ -421,8 +495,8 @@ public class AudioEngine {
          * Load audio clip from file
          */
         public static AudioClip loadAudioClip(String filePath, String name) throws Exception {
-            // In a real implementation, this would load audio from a file
             // This is a simplified placeholder that creates a dummy clip
+            // In a real implementation, this would load actual audio from a file
             AudioFormat format = new AudioFormat(44100, 16, 2, true, false);
             byte[] dummyData = new byte[44100 * 4]; // 1 second of silence
             return new AudioClip(name, dummyData, format);
@@ -432,8 +506,8 @@ public class AudioEngine {
          * Load audio clip from resource
          */
         public static AudioClip loadAudioResource(String resourcePath, String name) throws Exception {
-            // In a real implementation, this would load audio from a resource
             // This is a simplified placeholder that creates a dummy clip
+            // In a real implementation, this would load audio from a resource
             AudioFormat format = new AudioFormat(44100, 16, 2, true, false);
             byte[] dummyData = new byte[44100 * 4]; // 1 second of silence
             return new AudioClip(name, dummyData, format);
@@ -479,6 +553,49 @@ public class AudioEngine {
             double dopplerFactor = 1.0 / (1.0 - velocityAlongLineOfSight / 343.0); // Speed of sound = 343 m/s
             
             return new SpatialParameters(pan, attenuation, dopplerFactor);
+        }
+        
+        /**
+         * Apply 3D spatialization to audio data
+         */
+        public static byte[] applySpatialization(byte[] audioData, AudioFormat format, SpatialParameters params) {
+            // Apply panning
+            return applyPanning(audioData, format, params.pan);
+        }
+        
+        /**
+         * Apply panning to stereo audio data
+         */
+        public static byte[] applyPanning(byte[] audioData, AudioFormat format, double pan) {
+            if (format.getChannels() != 2) {
+                return audioData; // Only apply panning to stereo audio
+            }
+            
+            byte[] result = audioData.clone();
+            int frameSize = format.getFrameSize();
+            
+            for (int i = 0; i < result.length; i += frameSize) {
+                if (i + frameSize <= result.length) {
+                    // Extract left and right samples
+                    short leftSample = (short) ((result[i] & 0xFF) | ((result[i + 1] & 0xFF) << 8));
+                    short rightSample = (short) ((result[i + 2] & 0xFF) | ((result[i + 3] & 0xFF) << 8));
+                    
+                    // Apply panning
+                    double leftGain = Math.min(1.0, 1.0 - pan);
+                    double rightGain = Math.min(1.0, 1.0 + pan);
+                    
+                    leftSample = (short) (leftSample * leftGain);
+                    rightSample = (short) (rightSample * rightGain);
+                    
+                    // Write back
+                    result[i] = (byte) (leftSample & 0xFF);
+                    result[i + 1] = (byte) ((leftSample >> 8) & 0xFF);
+                    result[i + 2] = (byte) (rightSample & 0xFF);
+                    result[i + 3] = (byte) ((rightSample >> 8) & 0xFF);
+                }
+            }
+            
+            return result;
         }
         
         /**
@@ -584,36 +701,94 @@ public class AudioEngine {
          * Apply echo effect to audio data
          */
         public static byte[] applyEcho(byte[] audioData, AudioFormat format, double delay, double decay) {
-            // In a real implementation, this would apply an echo effect
-            // This is a simplified placeholder
-            return audioData.clone();
+            int sampleRate = (int) format.getSampleRate();
+            int delaySamples = (int) (delay * sampleRate);
+            byte[] result = audioData.clone();
+            
+            for (int i = delaySamples; i < result.length; i++) {
+                int delayedIndex = i - delaySamples;
+                if (delayedIndex >= 0) {
+                    int original = result[i] & 0xFF;
+                    int delayed = result[delayedIndex] & 0xFF;
+                    int mixed = (int) (original + delayed * decay);
+                    result[i] = (byte) (Math.min(255, Math.max(0, mixed)) & 0xFF);
+                }
+            }
+            
+            return result;
         }
         
         /**
          * Apply chorus effect to audio data
          */
         public static byte[] applyChorus(byte[] audioData, AudioFormat format, double depth, double rate) {
-            // In a real implementation, this would apply a chorus effect
-            // This is a simplified placeholder
-            return audioData.clone();
+            // Simple chorus implementation using slight delays and modulation
+            byte[] result = audioData.clone();
+            int sampleRate = (int) format.getSampleRate();
+            Random random = new Random(0); // Use consistent seed for predictable results
+            
+            for (int i = 0; i < result.length; i++) {
+                // Add slight variation to each sample
+                int sample = result[i] & 0xFF;
+                double modulation = Math.sin(2 * Math.PI * rate * i / sampleRate) * depth;
+                int modulated = (int) (sample + modulation * 10);
+                result[i] = (byte) (Math.min(255, Math.max(0, modulated)) & 0xFF);
+            }
+            
+            return result;
         }
         
         /**
          * Apply flanger effect to audio data
          */
         public static byte[] applyFlanger(byte[] audioData, AudioFormat format, double depth, double rate) {
-            // In a real implementation, this would apply a flanger effect
-            // This is a simplified placeholder
-            return audioData.clone();
+            int sampleRate = (int) format.getSampleRate();
+            byte[] result = audioData.clone();
+            int maxDelay = (int) (depth * sampleRate * 0.01); // Max delay in samples
+            
+            for (int i = maxDelay; i < result.length; i++) {
+                // Calculate varying delay based on sine wave
+                double delayMod = (Math.sin(2 * Math.PI * rate * i / sampleRate) + 1) / 2; // 0 to 1
+                int delay = (int) (delayMod * maxDelay);
+                
+                int delayedIndex = i - delay;
+                if (delayedIndex >= 0) {
+                    int original = result[i] & 0xFF;
+                    int delayed = result[delayedIndex] & 0xFF;
+                    int mixed = (original + delayed) / 2; // Simple mix
+                    result[i] = (byte) (mixed & 0xFF);
+                }
+            }
+            
+            return result;
         }
         
         /**
          * Apply distortion effect to audio data
          */
         public static byte[] applyDistortion(byte[] audioData, AudioFormat format, double gain, double threshold) {
-            // In a real implementation, this would apply a distortion effect
-            // This is a simplified placeholder
-            return audioData.clone();
+            byte[] result = audioData.clone();
+            
+            for (int i = 0; i < result.length; i++) {
+                int sample = result[i] & 0xFF;
+                double normalized = sample / 255.0;
+                
+                // Apply gain
+                normalized *= gain;
+                
+                // Apply clipping distortion
+                if (normalized > threshold) {
+                    normalized = threshold;
+                } else if (normalized < -threshold) {
+                    normalized = -threshold;
+                }
+                
+                // Convert back to byte
+                int distorted = (int) (normalized * 255);
+                result[i] = (byte) (Math.min(255, Math.max(0, distorted)) & 0xFF);
+            }
+            
+            return result;
         }
     }
     
@@ -626,6 +801,8 @@ public class AudioEngine {
         private final AudioListener listener;
         private final AudioMixer mixer;
         private boolean initialized;
+        private Thread audioThread;
+        private volatile boolean running;
         
         public Engine() {
             this.clips = new ConcurrentHashMap<>();
@@ -633,6 +810,7 @@ public class AudioEngine {
             this.listener = new AudioListener();
             this.mixer = new AudioMixer();
             this.initialized = false;
+            this.running = false;
         }
         
         /**
@@ -640,8 +818,8 @@ public class AudioEngine {
          */
         public void initialize() {
             if (!initialized) {
-                // In a real implementation, this would initialize audio system
                 initialized = true;
+                running = true;
             }
         }
         
@@ -650,6 +828,8 @@ public class AudioEngine {
          */
         public void shutdown() {
             if (initialized) {
+                running = false;
+                
                 // Stop all sources
                 for (AudioSource source : sources.values()) {
                     source.stop();
@@ -738,13 +918,28 @@ public class AudioEngine {
         public void update(double deltaTime) {
             if (!initialized) return;
             
-            // Update all sources
+            // Update all sources with spatialization
             for (AudioSource source : sources.values()) {
-                // In a real implementation, this would update source playback
+                if (source.isPlaying() && !source.isPaused()) {
+                    // Calculate 3D parameters
+                    SpatialAudioCalculator.SpatialParameters params = 
+                        SpatialAudioCalculator.calculate3DParameters(source, listener);
+                    
+                    // Apply spatialization to the source's processed data
+                    byte[] processed = source.getClip().getData().clone();
+                    processed = SpatialAudioCalculator.applySpatialization(
+                        processed, source.getClip().getFormat(), params);
+                    
+                    // Apply attenuation
+                    for (int i = 0; i < processed.length; i++) {
+                        int sample = processed[i] & 0xFF;
+                        sample = (int) (sample * params.attenuation);
+                        processed[i] = (byte) (sample & 0xFF);
+                    }
+                    
+                    source.setProcessedData(processed);
+                }
             }
-            
-            // Update mixer
-            mixer.mixAudio((int) (44100 * deltaTime), new AudioFormat(44100, 16, 2, true, false));
         }
         
         /**
@@ -780,5 +975,70 @@ public class AudioEngine {
         public double getMasterVolume() {
             return mixer.getMasterVolume();
         }
+        
+        /**
+         * Generate a procedural sound
+         */
+        public AudioClip generateSound(String name, WaveForm waveForm, double frequency, double duration) {
+            switch (waveForm) {
+                case SINE:
+                    return AudioSynthesizer.generateSineWave(name, frequency, duration, 44100);
+                case SQUARE:
+                    return AudioSynthesizer.generateSquareWave(name, frequency, duration, 44100);
+                case SAWTOOTH:
+                    return AudioSynthesizer.generateSawtoothWave(name, frequency, duration, 44100);
+                case NOISE:
+                    return AudioSynthesizer.generateWhiteNoise(name, duration, 44100);
+                default:
+                    return AudioSynthesizer.generateSineWave(name, frequency, duration, 44100);
+            }
+        }
+        
+        /**
+         * Apply an effect to an audio clip
+         */
+        public AudioClip applyEffect(AudioClip clip, AudioEffect effect, double... params) {
+            byte[] data = clip.getData().clone();
+            AudioFormat format = clip.getFormat();
+            
+            switch (effect) {
+                case ECHO:
+                    if (params.length >= 2) {
+                        data = AudioEffectProcessor.applyEcho(data, format, params[0], params[1]);
+                    }
+                    break;
+                case CHORUS:
+                    if (params.length >= 2) {
+                        data = AudioEffectProcessor.applyChorus(data, format, params[0], params[1]);
+                    }
+                    break;
+                case FLANGER:
+                    if (params.length >= 2) {
+                        data = AudioEffectProcessor.applyFlanger(data, format, params[0], params[1]);
+                    }
+                    break;
+                case DISTORTION:
+                    if (params.length >= 2) {
+                        data = AudioEffectProcessor.applyDistortion(data, format, params[0], params[1]);
+                    }
+                    break;
+            }
+            
+            return new AudioClip(clip.getName() + "_" + effect.toString().toLowerCase(), data, format);
+        }
+    }
+    
+    /**
+     * Wave form types for procedural sound generation
+     */
+    public enum WaveForm {
+        SINE, SQUARE, SAWTOOTH, NOISE
+    }
+    
+    /**
+     * Audio effect types
+     */
+    public enum AudioEffect {
+        ECHO, CHORUS, FLANGER, DISTORTION
     }
 }

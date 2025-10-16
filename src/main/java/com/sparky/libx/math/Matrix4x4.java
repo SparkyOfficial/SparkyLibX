@@ -15,6 +15,13 @@ public class Matrix4x4 {
     }
     
     /**
+     * Создает единичную матрицу
+     */
+    public static Matrix4x4 identity() {
+        return new Matrix4x4();
+    }
+    
+    /**
      * Создает новую матрицу с заданными элементами
      */
     public Matrix4x4(double[][] elements) {
@@ -142,6 +149,13 @@ public class Matrix4x4 {
         matrix.elements[1][3] = ty;
         matrix.elements[2][3] = tz;
         return matrix;
+    }
+    
+    /**
+     * Создает матрицу переноса из вектора
+     */
+    public static Matrix4x4 createTranslation(Vector3D vector) {
+        return createTranslation(vector.getX(), vector.getY(), vector.getZ());
     }
     
     /**
