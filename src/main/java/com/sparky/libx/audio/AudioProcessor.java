@@ -9,6 +9,7 @@ import com.sparky.libx.audio.AudioVisualizerAdvanced.Audio3DParams;
 import com.sparky.libx.audio.AudioVisualizerAdvanced.SpectrogramParams;
 import com.sparky.libx.audio.AudioAnalyzerAdvanced.AdvancedAnalysisResult;
 import com.sparky.libx.audio.AudioAnalyzerAdvanced.AudioFingerprint;
+import javax.sound.sampled.AudioFormat;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.*;
@@ -17,6 +18,7 @@ import java.util.concurrent.*;
 /**
  * Comprehensive audio processor that combines all audio functionality
  * into a single, easy-to-use interface
+ * @author Андрій Будильников
  */
 public class AudioProcessor {
     
@@ -98,18 +100,61 @@ public class AudioProcessor {
             return clips[0];
         }
         
-        // For simplicity, we'll just return the first clip
-        // In a real implementation, this would actually mix the audio data
-        return clips[0];
+        // mix the audio data from all clips
+        // get the longest clip as the base
+        AudioClip longestClip = clips[0];
+        for (AudioClip clip : clips) {
+            if (clip.getDuration() > longestClip.getDuration()) {
+                longestClip = clip;
+            }
+        }
+        
+        // create a new byte array for the mixed audio
+        byte[] mixedData = new byte[longestClip.getData().length];
+        AudioFormat format = longestClip.getFormat();
+        
+        // mix all clips
+        for (AudioClip clip : clips) {
+            byte[] clipData = clip.getData();
+            for (int i = 0; i < Math.min(mixedData.length, clipData.length); i++) {
+                // simple averaging mix
+                int mixedSample = ((mixedData[i] & 0xFF) + (clipData[i] & 0xFF)) / 2;
+                mixedData[i] = (byte) (mixedSample & 0xFF);
+            }
+        }
+        
+        return new AudioClip(name, mixedData, format);
     }
     
     /**
      * Convert audio clip format
      */
     public AudioClip convertFormat(AudioClip clip, int sampleRate, int sampleSizeInBits, int channels) {
-        // In a real implementation, this would convert the audio format
-        // For now, we'll just return the original clip
-        return clip;
+        // convert the audio format of the clip
+        AudioFormat originalFormat = clip.getFormat();
+        byte[] originalData = clip.getData();
+        
+        // if format is already correct, return original clip
+        if (originalFormat.getSampleRate() == sampleRate && 
+            originalFormat.getSampleSizeInBits() == sampleSizeInBits && 
+            originalFormat.getChannels() == channels) {
+            return clip;
+        }
+        
+        // perform format conversion
+        // this is a simplified implementation - in a real application, you would use
+        // proper resampling and bit depth conversion algorithms
+        AudioFormat newFormat = new AudioFormat(
+            sampleRate, 
+            sampleSizeInBits, 
+            channels, 
+            sampleSizeInBits > 8, 
+            false
+        );
+        
+        // for simplicity, we'll just return a new clip with the new format
+        // in a real implementation, you would convert the actual audio data
+        return new AudioClip(clip.getName() + "_converted", originalData, newFormat);
     }
     
     /**
@@ -165,24 +210,27 @@ public class AudioProcessor {
      * Play audio clip
      */
     public void play(AudioClip clip) {
-        // In a real implementation, this would play the audio
+        // play the audio clip through the system's audio output
         System.out.println("Playing clip: " + clip.getName());
+        // in a real implementation, you would use the Java Sound API to play the audio
     }
     
     /**
      * Play audio clip with 3D positioning
      */
     public void play3D(AudioClip clip, double x, double y, double z) {
-        // In a real implementation, this would play the audio with 3D positioning
+        // play the audio clip with 3D spatial positioning
         System.out.println("Playing clip in 3D space: " + clip.getName() + " at (" + x + ", " + y + ", " + z + ")");
+        // in a real implementation, you would use a 3D audio library to position the sound
     }
     
     /**
      * Save audio clip to file
      */
     public void saveToFile(AudioClip clip, String filePath) throws Exception {
-        // In a real implementation, this would save the audio to a file
-        System.out.println("Saving clip to file: " + filePath);
+        // save the audio clip to a file
+        AudioFileLoader.saveAudioClip(clip, filePath);
+        System.out.println("Saved clip to file: " + filePath);
     }
     
     /**

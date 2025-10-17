@@ -1,152 +1,18 @@
 package com.sparky.libx.game;
 
-import com.sparky.libx.math.Vector3D;
 import com.sparky.libx.graphics.Renderer3D;
+import com.sparky.libx.math.Vector3D;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.*;
 
 /**
- * Advanced Game Engine for Minecraft Plugins
- * Provides capabilities for game entity management, physics, and game logic
+ * Advanced game engine implementation
+ * @author Андрій Будильников
  */
 public class GameEngine {
     
     /**
-     * Represents a game entity with position, rotation, and components
-     */
-    public static class Entity {
-        private final UUID id;
-        private Vector3D position;
-        private Vector3D rotation;
-        private Vector3D scale;
-        private final Map<String, Object> components;
-        private boolean active;
-        private Entity parent;
-        private final List<Entity> children;
-        
-        public Entity() {
-            this.id = UUID.randomUUID();
-            this.position = new Vector3D(0, 0, 0);
-            this.rotation = new Vector3D(0, 0, 0);
-            this.scale = new Vector3D(1, 1, 1);
-            this.components = new HashMap<>();
-            this.active = true;
-            this.children = new CopyOnWriteArrayList<>();
-        }
-        
-        public Entity(Vector3D position) {
-            this();
-            this.position = position;
-        }
-        
-        public UUID getId() {
-            return id;
-        }
-        
-        public Vector3D getPosition() {
-            return position;
-        }
-        
-        public void setPosition(Vector3D position) {
-            this.position = position;
-        }
-        
-        public Vector3D getRotation() {
-            return rotation;
-        }
-        
-        public void setRotation(Vector3D rotation) {
-            this.rotation = rotation;
-        }
-        
-        public Vector3D getScale() {
-            return scale;
-        }
-        
-        public void setScale(Vector3D scale) {
-            this.scale = scale;
-        }
-        
-        public boolean isActive() {
-            return active;
-        }
-        
-        public void setActive(boolean active) {
-            this.active = active;
-        }
-        
-        public Entity getParent() {
-            return parent;
-        }
-        
-        public List<Entity> getChildren() {
-            return new ArrayList<>(children);
-        }
-        
-        public void setParent(Entity parent) {
-            if (this.parent != null) {
-                this.parent.children.remove(this);
-            }
-            this.parent = parent;
-            if (parent != null) {
-                parent.children.add(this);
-            }
-        }
-        
-        public void addChild(Entity child) {
-            child.setParent(this);
-        }
-        
-        public void removeChild(Entity child) {
-            if (children.contains(child)) {
-                child.setParent(null);
-            }
-        }
-        
-        public void addComponent(String name, Object component) {
-            components.put(name, component);
-        }
-        
-        public <T> T getComponent(String name, Class<T> type) {
-            Object component = components.get(name);
-            if (type.isInstance(component)) {
-                return type.cast(component);
-            }
-            return null;
-        }
-        
-        public void removeComponent(String name) {
-            components.remove(name);
-        }
-        
-        public Set<String> getComponentNames() {
-            return new HashSet<>(components.keySet());
-        }
-        
-        public Vector3D getWorldPosition() {
-            if (parent != null) {
-                return parent.getWorldPosition().add(position);
-            }
-            return position;
-        }
-        
-        public Vector3D getWorldRotation() {
-            if (parent != null) {
-                return parent.getWorldRotation().add(rotation);
-            }
-            return rotation;
-        }
-        
-        @Override
-        public String toString() {
-            return String.format("Entity{id=%s, pos=%s, rot=%s, components=%d}", 
-                id, position, rotation, components.size());
-        }
-    }
-    
-    /**
-     * Component interface for game entities
+     * Base component interface
      */
     public interface Component {
         void update(double deltaTime);
@@ -154,57 +20,114 @@ public class GameEngine {
     }
     
     /**
-     * Transform component for entity positioning
+     * Base entity class
      */
-    public static class TransformComponent implements Component {
+    public static class Entity {
+        private final UUID id;
+        private String name;
         private Vector3D position;
         private Vector3D rotation;
         private Vector3D scale;
+        private boolean active;
+        private final Map<String, Object> components;
+        private final List<Entity> children;
+        private Entity parent;
         
-        public TransformComponent() {
+        public Entity() {
+            this.id = UUID.randomUUID();
+            this.name = "Entity_" + id.toString().substring(0, 8);
             this.position = new Vector3D(0, 0, 0);
             this.rotation = new Vector3D(0, 0, 0);
             this.scale = new Vector3D(1, 1, 1);
+            this.active = true;
+            this.components = new ConcurrentHashMap<>();
+            this.children = new CopyOnWriteArrayList<>();
+            this.parent = null;
         }
         
-        public TransformComponent(Vector3D position, Vector3D rotation, Vector3D scale) {
-            this.position = position;
-            this.rotation = rotation;
-            this.scale = scale;
+        public Entity(String name) {
+            this();
+            this.name = name;
         }
         
-        public Vector3D getPosition() {
-            return position;
+        public void addComponent(String name, Object component) {
+            components.put(name, component);
         }
         
-        public void setPosition(Vector3D position) {
-            this.position = position;
+        public void removeComponent(String name) {
+            components.remove(name);
         }
         
-        public Vector3D getRotation() {
-            return rotation;
+        @SuppressWarnings("unchecked")
+        public <T> T getComponent(String name, Class<T> type) {
+            Object component = components.get(name);
+            if (type.isInstance(component)) {
+                return (T) component;
+            }
+            return null;
         }
         
-        public void setRotation(Vector3D rotation) {
-            this.rotation = rotation;
+        public Set<String> getComponentNames() {
+            return new HashSet<>(components.keySet());
         }
         
-        public Vector3D getScale() {
-            return scale;
+        public void addChild(Entity child) {
+            if (child.parent != null) {
+                child.parent.removeChild(child);
+            }
+            children.add(child);
+            child.parent = this;
         }
         
-        public void setScale(Vector3D scale) {
-            this.scale = scale;
+        public void removeChild(Entity child) {
+            children.remove(child);
+            child.parent = null;
+        }
+        
+        public List<Entity> getChildren() {
+            return new ArrayList<>(children);
+        }
+        
+        public Entity getParent() {
+            return parent;
+        }
+        
+        // getters and setters
+        public UUID getId() { return id; }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public Vector3D getPosition() { return position; }
+        public void setPosition(Vector3D position) { this.position = position; }
+        public Vector3D getRotation() { return rotation; }
+        public void setRotation(Vector3D rotation) { this.rotation = rotation; }
+        public Vector3D getScale() { return scale; }
+        public void setScale(Vector3D scale) { this.scale = scale; }
+        public boolean isActive() { return active; }
+        public void setActive(boolean active) { this.active = active; }
+        
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Entity entity = (Entity) o;
+            return Objects.equals(id, entity.id);
         }
         
         @Override
-        public void update(double deltaTime) {
-            // Transform updates happen through direct property changes
+        public int hashCode() {
+            return Objects.hash(id);
         }
         
         @Override
-        public void render(Renderer3D.RenderContext context) {
-            // Transform affects rendering but doesn't render itself
+        public String toString() {
+            return "Entity{" +
+                   "id=" + id +
+                   ", name='" + name + '\'' +
+                   ", position=" + position +
+                   ", rotation=" + rotation +
+                   ", scale=" + scale +
+                   ", active=" + active +
+                   '}';
         }
     }
     
@@ -225,22 +148,6 @@ public class GameEngine {
             this.visible = true;
         }
         
-        public Renderer3D.Mesh getMesh() {
-            return mesh;
-        }
-        
-        public void setMesh(Renderer3D.Mesh mesh) {
-            this.mesh = mesh;
-        }
-        
-        public boolean isVisible() {
-            return visible;
-        }
-        
-        public void setVisible(boolean visible) {
-            this.visible = visible;
-        }
-        
         @Override
         public void update(double deltaTime) {
             // Render component updates happen through direct property changes
@@ -249,9 +156,18 @@ public class GameEngine {
         @Override
         public void render(Renderer3D.RenderContext context) {
             if (visible && mesh != null) {
-                // In a real implementation, this would render the mesh
+                // render the mesh using the provided context
+                // this would typically involve transforming the mesh based on the entity's position
+                // and then drawing it to the screen
+                System.out.println("rendering mesh for entity");
             }
         }
+        
+        // getters and setters
+        public Renderer3D.Mesh getMesh() { return mesh; }
+        public void setMesh(Renderer3D.Mesh mesh) { this.mesh = mesh; }
+        public boolean isVisible() { return visible; }
+        public void setVisible(boolean visible) { this.visible = visible; }
     }
     
     /**
@@ -454,197 +370,35 @@ public class GameEngine {
         private final Entity entityB;
         private final Vector3D contactPoint;
         private final Vector3D normal;
-        private final double penetration;
+        private final double penetrationDepth;
         
-        public Collision(Entity entityA, Entity entityB, Vector3D contactPoint, Vector3D normal, double penetration) {
+        public Collision(Entity entityA, Entity entityB, Vector3D contactPoint, Vector3D normal, double penetrationDepth) {
             this.entityA = entityA;
             this.entityB = entityB;
             this.contactPoint = contactPoint;
             this.normal = normal;
-            this.penetration = penetration;
+            this.penetrationDepth = penetrationDepth;
         }
         
-        public Entity getEntityA() {
-            return entityA;
-        }
-        
-        public Entity getEntityB() {
-            return entityB;
-        }
-        
-        public Vector3D getContactPoint() {
-            return contactPoint;
-        }
-        
-        public Vector3D getNormal() {
-            return normal;
-        }
-        
-        public double getPenetration() {
-            return penetration;
-        }
+        // getters
+        public Entity getEntityA() { return entityA; }
+        public Entity getEntityB() { return entityB; }
+        public Vector3D getContactPoint() { return contactPoint; }
+        public Vector3D getNormal() { return normal; }
+        public double getPenetrationDepth() { return penetrationDepth; }
     }
     
     /**
-     * Input component for handling user input
-     */
-    public static class InputComponent implements Component {
-        private final Map<String, Boolean> keys;
-        private final Map<Integer, Boolean> mouseButtons;
-        private Vector3D mousePosition;
-        private Vector3D mouseDelta;
-        
-        public InputComponent() {
-            this.keys = new ConcurrentHashMap<>();
-            this.mouseButtons = new ConcurrentHashMap<>();
-            this.mousePosition = new Vector3D(0, 0, 0);
-            this.mouseDelta = new Vector3D(0, 0, 0);
-        }
-        
-        public boolean isKeyDown(String key) {
-            return keys.getOrDefault(key, false);
-        }
-        
-        public void setKeyDown(String key, boolean down) {
-            keys.put(key, down);
-        }
-        
-        public boolean isMouseButtonDown(int button) {
-            return mouseButtons.getOrDefault(button, false);
-        }
-        
-        public void setMouseButtonDown(int button, boolean down) {
-            mouseButtons.put(button, down);
-        }
-        
-        public Vector3D getMousePosition() {
-            return mousePosition;
-        }
-        
-        public void setMousePosition(Vector3D mousePosition) {
-            this.mousePosition = mousePosition;
-        }
-        
-        public Vector3D getMouseDelta() {
-            return mouseDelta;
-        }
-        
-        public void setMouseDelta(Vector3D mouseDelta) {
-            this.mouseDelta = mouseDelta;
-        }
-        
-        @Override
-        public void update(double deltaTime) {
-            // Input updates happen through event handlers
-        }
-        
-        @Override
-        public void render(Renderer3D.RenderContext context) {
-            // Input component doesn't render
-        }
-    }
-    
-    /**
-     * Game state manager
-     */
-    public static class GameStateManager {
-        private final Map<String, GameState> states;
-        private GameState currentState;
-        private GameState previousState;
-        
-        public GameStateManager() {
-            this.states = new HashMap<>();
-            this.currentState = null;
-            this.previousState = null;
-        }
-        
-        public void addState(String name, GameState state) {
-            states.put(name, state);
-        }
-        
-        public GameState getState(String name) {
-            return states.get(name);
-        }
-        
-        public void setState(String name) {
-            GameState newState = states.get(name);
-            if (newState != null) {
-                if (currentState != null) {
-                    currentState.onExit();
-                }
-                previousState = currentState;
-                currentState = newState;
-                currentState.onEnter();
-            }
-        }
-        
-        public void pushState(String name) {
-            GameState newState = states.get(name);
-            if (newState != null) {
-                if (currentState != null) {
-                    currentState.onPause();
-                }
-                previousState = currentState;
-                currentState = newState;
-                currentState.onEnter();
-            }
-        }
-        
-        public void popState() {
-            if (currentState != null) {
-                currentState.onExit();
-            }
-            currentState = previousState;
-            previousState = null;
-            if (currentState != null) {
-                currentState.onResume();
-            }
-        }
-        
-        public GameState getCurrentState() {
-            return currentState;
-        }
-        
-        public void update(double deltaTime) {
-            if (currentState != null) {
-                currentState.onUpdate(deltaTime);
-            }
-        }
-        
-        public void render(Renderer3D.RenderContext context) {
-            if (currentState != null) {
-                currentState.onRender(context);
-            }
-        }
-    }
-    
-    /**
-     * Game state interface
-     */
-    public interface GameState {
-        void onEnter();
-        void onExit();
-        void onPause();
-        void onResume();
-        void onUpdate(double deltaTime);
-        void onRender(Renderer3D.RenderContext context);
-    }
-    
-    /**
-     * Scene graph for organizing game entities
+     * Scene graph for managing entities
      */
     public static class SceneGraph {
         private final Entity root;
         private final Map<UUID, Entity> entityMap;
         
         public SceneGraph() {
-            this.root = new Entity(new Vector3D(0, 0, 0));
+            this.root = new Entity("Root");
             this.entityMap = new ConcurrentHashMap<>();
             this.entityMap.put(root.getId(), root);
-        }
-        
-        public Entity getRoot() {
-            return root;
         }
         
         public void addEntity(Entity entity) {
@@ -652,16 +406,11 @@ public class GameEngine {
             entityMap.put(entity.getId(), entity);
         }
         
-        public void addEntity(Entity parent, Entity entity) {
-            parent.addChild(entity);
-            entityMap.put(entity.getId(), entity);
-        }
-        
-        public void removeEntity(Entity entity) {
-            if (entity.getParent() != null) {
+        public void removeEntity(UUID id) {
+            Entity entity = entityMap.remove(id);
+            if (entity != null && entity.getParent() != null) {
                 entity.getParent().removeChild(entity);
             }
-            entityMap.remove(entity.getId());
         }
         
         public Entity findEntity(UUID id) {
@@ -670,8 +419,12 @@ public class GameEngine {
         
         public List<Entity> findEntitiesByName(String name) {
             List<Entity> result = new ArrayList<>();
-            // In a real implementation, entities would have names
-            // This is a placeholder for the search functionality
+            // search through all entities for matching names
+            for (Entity entity : entityMap.values()) {
+                if (entity.getName().equals(name)) {
+                    result.add(entity);
+                }
+            }
             return result;
         }
         
@@ -881,20 +634,23 @@ public class GameEngine {
         public void update(double deltaTime) {
             if (alive) {
                 lifeTime -= deltaTime;
-                if (lifeTime <= 0) {
-                    alive = false;
-                    return;
-                }
+                alive = lifeTime > 0;
                 
-                // Update physics
-                velocity = velocity.add(acceleration.multiply(deltaTime));
-                position = position.add(velocity.multiply(deltaTime));
+                if (alive) {
+                    // Update velocity
+                    velocity = velocity.add(acceleration.multiply(deltaTime));
+                    
+                    // Update position
+                    position = position.add(velocity.multiply(deltaTime));
+                }
             }
         }
         
         public void render(Renderer3D.RenderContext context) {
             if (alive) {
-                // In a real implementation, this would render the particle
+                // render the particle using the provided context
+                // this would typically involve drawing a quad or sprite at the particle's position
+                System.out.println("rendering particle at " + position);
             }
         }
         

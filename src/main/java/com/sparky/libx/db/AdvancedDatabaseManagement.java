@@ -631,7 +631,7 @@ public class AdvancedDatabaseManagement {
         /**
          * Gets entity metadata, creating it if necessary
          */
-        private EntityMetadata getEntityMetadata(Class<?> entityClass) {
+        private EntityMetadata getEntityMetadata(Class<?> entityClass) throws SQLException {
             EntityMetadata metadata = entityMetadataCache.get(entityClass);
             if (metadata == null) {
                 cacheLock.lock();
@@ -675,7 +675,11 @@ public class AdvancedDatabaseManagement {
                 int index = 1;
                 for (FieldMetadata field : metadata.getFields()) {
                     if (!field.isId() || metadata.getIdValue(entity) != null) {
-                        statement.setObject(index++, field.getValue(entity));
+                        try {
+                            statement.setObject(index++, field.getValue(entity));
+                        } catch (Exception e) {
+                            throw new SQLException("Failed to get value for field: " + field.getFieldName(), e);
+                        }
                     }
                 }
                 
@@ -686,7 +690,11 @@ public class AdvancedDatabaseManagement {
                     ResultSet generatedKeys = statement.getGeneratedKeys();
                     if (generatedKeys.next()) {
                         Object id = generatedKeys.getObject(1);
-                        metadata.getIdField().setValue(entity, id);
+                        try {
+                            metadata.getIdField().setValue(entity, id);
+                        } catch (Exception e) {
+                            throw new SQLException("Failed to set ID value", e);
+                        }
                     }
                     generatedKeys.close();
                 }
@@ -717,7 +725,11 @@ public class AdvancedDatabaseManagement {
                 int index = 1;
                 for (FieldMetadata field : metadata.getFields()) {
                     if (!field.isId()) {
-                        statement.setObject(index++, field.getValue(entity));
+                        try {
+                            statement.setObject(index++, field.getValue(entity));
+                        } catch (Exception e) {
+                            throw new SQLException("Failed to get value for field: " + field.getFieldName(), e);
+                        }
                     }
                 }
                 
@@ -794,7 +806,11 @@ public class AdvancedDatabaseManagement {
                 
                 for (FieldMetadata field : metadata.getFields()) {
                     Object value = resultSet.getObject(field.getColumnName());
-                    field.setValue(entity, value);
+                    try {
+                        field.setValue(entity, value);
+                    } catch (Exception e) {
+                        throw new SQLException("Failed to set value for field: " + field.getFieldName(), e);
+                    }
                 }
                 
                 return entity;
@@ -812,15 +828,34 @@ public class AdvancedDatabaseManagement {
         private final List<FieldMetadata> fields;
         private final FieldMetadata idField;
         
-        public EntityMetadata(Class<?> entityClass) {
-            // In a real implementation, this would use annotations or configuration
-            // For this example, we'll use simple naming conventions
+        public EntityMetadata(Class<?> entityClass) throws SQLException {
             this.tableName = entityClass.getSimpleName().toLowerCase();
             this.fields = new ArrayList<>();
-            this.idField = null;
+            FieldMetadata idFieldTemp = null;
             
-            // This is a simplified implementation
-            // In practice, you would use reflection to analyze the class
+            try {
+                // Use reflection to analyze the class
+                java.lang.reflect.Field[] declaredFields = entityClass.getDeclaredFields();
+                for (java.lang.reflect.Field field : declaredFields) {
+                    field.setAccessible(true);
+                    String fieldName = field.getName();
+                    String columnName = fieldName; // Could be customized with annotations
+                    
+                    // Check if this is the ID field (simplified check)
+                    boolean isId = fieldName.equals("id") || fieldName.endsWith("Id");
+                    
+                    FieldMetadata fieldMetadata = new FieldMetadata(fieldName, columnName, isId);
+                    this.fields.add(fieldMetadata);
+                    
+                    if (isId) {
+                        idFieldTemp = fieldMetadata;
+                    }
+                }
+                
+                this.idField = idFieldTemp;
+            } catch (Exception e) {
+                throw new SQLException("Failed to create entity metadata", e);
+            }
         }
         
         public String getTableName() {
@@ -867,13 +902,16 @@ public class AdvancedDatabaseManagement {
             return isId;
         }
         
-        public Object getValue(Object entity) {
-            // Simplified implementation
-            return null;
+        public Object getValue(Object entity) throws Exception {
+            java.lang.reflect.Field field = entity.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.get(entity);
         }
         
-        public void setValue(Object entity, Object value) {
-            // Simplified implementation
+        public void setValue(Object entity, Object value) throws Exception {
+            java.lang.reflect.Field field = entity.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(entity, value);
         }
     }
     

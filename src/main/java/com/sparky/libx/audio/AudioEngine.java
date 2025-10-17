@@ -5,6 +5,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.sound.sampled.*;
+import java.io.*;
 
 /**
  * Advanced Audio Engine for Minecraft Plugins
@@ -495,22 +496,80 @@ public class AudioEngine {
          * Load audio clip from file
          */
         public static AudioClip loadAudioClip(String filePath, String name) throws Exception {
-            // This is a simplified placeholder that creates a dummy clip
-            // In a real implementation, this would load actual audio from a file
-            AudioFormat format = new AudioFormat(44100, 16, 2, true, false);
-            byte[] dummyData = new byte[44100 * 4]; // 1 second of silence
-            return new AudioClip(name, dummyData, format);
+            File file = new File(filePath);
+            if (!file.exists()) {
+                throw new FileNotFoundException("Audio file not found: " + filePath);
+            }
+            
+            AudioInputStream audioStream = AudioSystem.getAudioInputStream(file);
+            AudioFormat format = audioStream.getFormat();
+            
+            // Convert to PCM format if needed
+            if (format.getEncoding() != AudioFormat.Encoding.PCM_SIGNED) {
+                format = new AudioFormat(
+                    AudioFormat.Encoding.PCM_SIGNED,
+                    format.getSampleRate(),
+                    16,
+                    format.getChannels(),
+                    format.getChannels() * 2,
+                    format.getSampleRate(),
+                    false
+                );
+                audioStream = AudioSystem.getAudioInputStream(format, audioStream);
+            }
+            
+            // Read all audio data
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] data = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = audioStream.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, bytesRead);
+            }
+            
+            audioStream.close();
+            byte[] audioData = buffer.toByteArray();
+            
+            return new AudioClip(name, audioData, format);
         }
         
         /**
          * Load audio clip from resource
          */
         public static AudioClip loadAudioResource(String resourcePath, String name) throws Exception {
-            // This is a simplified placeholder that creates a dummy clip
-            // In a real implementation, this would load audio from a resource
-            AudioFormat format = new AudioFormat(44100, 16, 2, true, false);
-            byte[] dummyData = new byte[44100 * 4]; // 1 second of silence
-            return new AudioClip(name, dummyData, format);
+            InputStream inputStream = AudioEngine.class.getResourceAsStream(resourcePath);
+            if (inputStream == null) {
+                throw new FileNotFoundException("Audio resource not found: " + resourcePath);
+            }
+            
+            AudioInputStream audioStream = AudioSystem.getAudioInputStream(inputStream);
+            AudioFormat format = audioStream.getFormat();
+            
+            // Convert to PCM format if needed
+            if (format.getEncoding() != AudioFormat.Encoding.PCM_SIGNED) {
+                format = new AudioFormat(
+                    AudioFormat.Encoding.PCM_SIGNED,
+                    format.getSampleRate(),
+                    16,
+                    format.getChannels(),
+                    format.getChannels() * 2,
+                    format.getSampleRate(),
+                    false
+                );
+                audioStream = AudioSystem.getAudioInputStream(format, audioStream);
+            }
+            
+            // Read all audio data
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] data = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = audioStream.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, bytesRead);
+            }
+            
+            audioStream.close();
+            byte[] audioData = buffer.toByteArray();
+            
+            return new AudioClip(name, audioData, format);
         }
     }
     

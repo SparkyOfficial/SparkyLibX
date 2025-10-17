@@ -36,6 +36,20 @@ public class Matrix4x4 {
     }
     
     /**
+     * Создает новую матрицу с заданными элементами
+     */
+    public Matrix4x4(double m00, double m01, double m02, double m03,
+                     double m10, double m11, double m12, double m13,
+                     double m20, double m21, double m22, double m23,
+                     double m30, double m31, double m32, double m33) {
+        this.elements = new double[4][4];
+        this.elements[0][0] = m00; this.elements[0][1] = m01; this.elements[0][2] = m02; this.elements[0][3] = m03;
+        this.elements[1][0] = m10; this.elements[1][1] = m11; this.elements[1][2] = m12; this.elements[1][3] = m13;
+        this.elements[2][0] = m20; this.elements[2][1] = m21; this.elements[2][2] = m22; this.elements[2][3] = m23;
+        this.elements[3][0] = m30; this.elements[3][1] = m31; this.elements[3][2] = m32; this.elements[3][3] = m33;
+    }
+    
+    /**
      * Устанавливает матрицу как единичную
      */
     public void setIdentity() {
@@ -97,6 +111,23 @@ public class Matrix4x4 {
             }
         }
         return result;
+    }
+    
+    /**
+     * Умножает матрицу на вектор
+     */
+    public Vector3D multiply(Vector3D vector) {
+        double x = vector.getX();
+        double y = vector.getY();
+        double z = vector.getZ();
+        
+        // Assuming w = 1 for position vectors
+        double newX = elements[0][0] * x + elements[0][1] * y + elements[0][2] * z + elements[0][3];
+        double newY = elements[1][0] * x + elements[1][1] * y + elements[1][2] * z + elements[1][3];
+        double newZ = elements[2][0] * x + elements[2][1] * y + elements[2][2] * z + elements[2][3];
+        //double w = elements[3][0] * x + elements[3][1] * y + elements[3][2] * z + elements[3][3];
+        
+        return new Vector3D(newX, newY, newZ);
     }
     
     /**

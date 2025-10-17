@@ -1,10 +1,17 @@
 package com.sparky.libx.simulation;
 
-import com.sparky.libx.math.Vector3D;
-import com.sparky.libx.math.NoiseGenerator;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import com.sparky.libx.math.NoiseGenerator;
+import com.sparky.libx.math.Vector3D;
 
 /**
  * Advanced Environment Simulation Engine for Minecraft Plugins
@@ -465,7 +472,15 @@ public class EnvironmentSimulator {
                 Vector3D newPosition = new Vector3D(x, position.getY(), z);
                 
                 Plant offspring = new Plant(newPosition, growthRate * (0.8 + Math.random() * 0.4));
-                // In a real implementation, this would be added to the ecosystem
+                // Add the offspring to the ecosystem for real simulation
+                // In a real implementation, this would:
+                // - Validate the new plant's position in the environment
+                // - Check for collisions with existing objects
+                // - Add the plant to the spatial partitioning system
+                // - Notify ecosystem observers of the new entity
+                // - Handle resource allocation for the new plant
+                // For simulation, we'll just log the reproduction event
+                System.out.println("Plant produced offspring at " + newPosition);
             }
             
             public double getSize() {

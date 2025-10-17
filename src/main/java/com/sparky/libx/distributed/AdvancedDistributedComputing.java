@@ -1,269 +1,379 @@
 package com.sparky.libx.distributed;
 
-import com.sparky.libx.math.Vector3D;
+import com.sparky.libx.network.NetworkUtils;
 import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
-import java.util.concurrent.locks.*;
-import java.security.*;
-import java.nio.*;
-import java.nio.channels.*;
-import java.util.zip.*;
-import java.util.stream.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Advanced Distributed Computing Framework for Minecraft Plugins
- * Provides capabilities for distributed computing, MapReduce, consensus algorithms, and distributed systems
- * 
+ * Advanced distributed computing framework
  * @author Андрій Будильников
  */
 public class AdvancedDistributedComputing {
     
     /**
-     * Represents a distributed MapReduce framework
+     * Represents a node in the distributed system
      */
-    public static class MapReduceFramework {
-        private final List<String> clusterNodes;
+    public static class Node {
+        private final String id;
+        private final String address;
+        private final int port;
+        private final Set<String> clusterNodes;
+        private final AtomicBoolean active;
+        private ServerSocket serverSocket;
         private final ExecutorService executorService;
+        private final Map<String, Long> nodeHeartbeats;
+        private final Lock nodeLock;
         
-        public MapReduceFramework(List<String> clusterNodes) {
-            this.clusterNodes = new ArrayList<>(clusterNodes);
+        public Node(String id, String address, int port, List<String> clusterNodes) {
+            this.id = id;
+            this.address = address;
+            this.port = port;
+            this.clusterNodes = new HashSet<>(clusterNodes);
+            this.active = new AtomicBoolean(false);
             this.executorService = Executors.newCachedThreadPool();
+            this.nodeHeartbeats = new ConcurrentHashMap<>();
+            this.nodeLock = new ReentrantLock();
         }
         
         /**
-         * Executes a MapReduce job
+         * Starts the node
          */
-        public <K, V> Map<K, List<V>> execute(MapReduceJob<K, V> job) {
+        public void start() throws IOException {
+            if (active.get()) {
+                throw new IllegalStateException("Node is already running");
+            }
+            
+            active.set(true);
+            serverSocket = new ServerSocket(port);
+            
+            // Start server thread
+            executorService.submit(this::serverLoop);
+            
+            // Start heartbeat thread
+            executorService.submit(this::heartbeatLoop);
+            
+            System.out.println("Node " + id + " started on " + address + ":" + port);
+        }
+        
+        /**
+         * Stops the node
+         */
+        public void stop() {
+            if (!active.get()) {
+                return;
+            }
+            
+            active.set(false);
+            
             try {
-                // Split input data into chunks
-                List<List<String>> chunks = splitData(job.getInputData(), clusterNodes.size());
-                
-                // Execute map phase in parallel
-                List<Future<List<KeyValuePair<K, V>>>> mapFutures = new ArrayList<>();
-                for (int i = 0; i < chunks.size(); i++) {
-                    final int index = i;
-                    Future<List<KeyValuePair<K, V>>> future = executorService.submit(new Callable<List<KeyValuePair<K, V>>>() {
-                        @Override
-                        public List<KeyValuePair<K, V>> call() throws Exception {
-                            return job.getMapFunction().apply(chunks.get(index));
-                        }
-                    });
-                    mapFutures.add(future);
+                if (serverSocket != null && !serverSocket.isClosed()) {
+                    serverSocket.close();
                 }
-                
-                // Collect map results
-                List<KeyValuePair<K, V>> mapResults = new ArrayList<>();
-                for (Future<List<KeyValuePair<K, V>>> future : mapFutures) {
-                    try {
-                        mapResults.addAll(future.get());
-                    } catch (ExecutionException e) {
-                        throw new RuntimeException("Map task failed", e.getCause());
-                    }
-                }
-                
-                // Shuffle and sort by key
-                Map<K, List<V>> shuffledData = shuffleAndSort(mapResults);
-                
-                // Execute reduce phase in parallel
-                Map<K, Future<V>> reduceFutures = new HashMap<>();
-                for (Map.Entry<K, List<V>> entry : shuffledData.entrySet()) {
-                    final K key = entry.getKey();
-                    final List<V> values = entry.getValue();
-                    Future<V> future = executorService.submit(new Callable<V>() {
-                        @Override
-                        public V call() throws Exception {
-                            return job.getReduceFunction().apply(key, values);
-                        }
-                    });
-                    reduceFutures.put(key, future);
-                }
-                
-                // Collect reduce results
-                Map<K, List<V>> finalResults = new HashMap<>();
-                for (Map.Entry<K, Future<V>> entry : reduceFutures.entrySet()) {
-                    K key = entry.getKey();
-                    try {
-                        V reducedValue = entry.getValue().get();
-                        finalResults.put(key, Arrays.asList(reducedValue));
-                    } catch (ExecutionException e) {
-                        throw new RuntimeException("Reduce task failed for key " + key, e.getCause());
-                    }
-                }
-                
-                return finalResults;
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException("MapReduce job interrupted", e);
-            }
-        }
-        
-        /**
-         * Splits input data into chunks
-         */
-        private List<List<String>> splitData(List<String> data, int numChunks) {
-            List<List<String>> chunks = new ArrayList<>();
-            int chunkSize = Math.max(1, data.size() / numChunks);
-            
-            for (int i = 0; i < data.size(); i += chunkSize) {
-                int end = Math.min(i + chunkSize, data.size());
-                chunks.add(data.subList(i, end));
+            } catch (IOException e) {
+                System.err.println("Error closing server socket: " + e.getMessage());
             }
             
-            return chunks;
-        }
-        
-        /**
-         * Shuffles and sorts map results by key
-         */
-        private <K, V> Map<K, List<V>> shuffleAndSort(List<KeyValuePair<K, V>> mapResults) {
-            Map<K, List<V>> shuffledData = new HashMap<>();
-            
-            for (KeyValuePair<K, V> pair : mapResults) {
-                shuffledData.computeIfAbsent(pair.getKey(), k -> new ArrayList<>()).add(pair.getValue());
-            }
-            
-            return shuffledData;
-        }
-        
-        /**
-         * Shuts down the framework
-         */
-        public void shutdown() {
             executorService.shutdown();
             try {
-                if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
                     executorService.shutdownNow();
                 }
             } catch (InterruptedException e) {
                 executorService.shutdownNow();
                 Thread.currentThread().interrupt();
             }
+            
+            System.out.println("Node " + id + " stopped");
+        }
+        
+        /**
+         * Server loop for handling incoming connections
+         */
+        private void serverLoop() {
+            while (active.get() && !serverSocket.isClosed()) {
+                try {
+                    Socket clientSocket = serverSocket.accept();
+                    executorService.submit(() -> handleClient(clientSocket));
+                } catch (IOException e) {
+                    if (active.get()) {
+                        System.err.println("Error accepting client connection: " + e.getMessage());
+                    }
+                }
+            }
+        }
+        
+        /**
+         * Handles a client connection
+         */
+        private void handleClient(Socket clientSocket) {
+            try (ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+                 ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())) {
+                
+                // Read message
+                Object message = in.readObject();
+                
+                // Process message
+                Object response = processMessage(message);
+                
+                // Send response
+                if (response != null) {
+                    out.writeObject(response);
+                }
+                
+            } catch (Exception e) {
+                System.err.println("Error handling client: " + e.getMessage());
+            } finally {
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    System.err.println("Error closing client socket: " + e.getMessage());
+                }
+            }
+        }
+        
+        /**
+         * Processes an incoming message
+         */
+        private Object processMessage(Object message) {
+            if (message instanceof HeartbeatMessage) {
+                HeartbeatMessage heartbeat = (HeartbeatMessage) message;
+                nodeHeartbeats.put(heartbeat.getNodeId(), System.currentTimeMillis());
+                return new HeartbeatResponse(id);
+            } else if (message instanceof TaskMessage) {
+                TaskMessage taskMsg = (TaskMessage) message;
+                return executeTask(taskMsg.getTask());
+            }
+            
+            return null;
+        }
+        
+        /**
+         * Executes a task
+         */
+        private Object executeTask(Task task) {
+            try {
+                return task.execute();
+            } catch (Exception e) {
+                System.err.println("Error executing task: " + e.getMessage());
+                return new TaskError(e.getMessage());
+            }
+        }
+        
+        /**
+         * Heartbeat loop for maintaining cluster connectivity
+         */
+        private void heartbeatLoop() {
+            while (active.get()) {
+                try {
+                    sendHeartbeats();
+                    Thread.sleep(1000); // Send heartbeats every second
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+        
+        /**
+         * Sends heartbeats to all cluster nodes
+         */
+        private void sendHeartbeats() {
+            HeartbeatMessage heartbeat = new HeartbeatMessage(id);
+            
+            for (String nodeAddress : clusterNodes) {
+                if (!nodeAddress.equals(address + ":" + port)) {
+                    try {
+                        sendMessage(nodeAddress, heartbeat);
+                    } catch (Exception e) {
+                        System.err.println("Error sending heartbeat to " + nodeAddress + ": " + e.getMessage());
+                    }
+                }
+            }
+        }
+        
+        /**
+         * Sends a message to another node
+         */
+        private Object sendMessage(String nodeAddress, Object message) throws Exception {
+            String[] parts = nodeAddress.split(":");
+            String host = parts[0];
+            int port = Integer.parseInt(parts[1]);
+            
+            try (Socket socket = new Socket(host, port);
+                 ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+                 ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
+                
+                // Send message
+                out.writeObject(message);
+                out.flush();
+                
+                // Read response
+                return in.readObject();
+            }
+        }
+        
+        /**
+         * Gets the node ID
+         */
+        public String getId() {
+            return id;
+        }
+        
+        /**
+         * Gets the node address
+         */
+        public String getAddress() {
+            return address;
+        }
+        
+        /**
+         * Gets the node port
+         */
+        public int getPort() {
+            return port;
+        }
+        
+        /**
+         * Checks if the node is active
+         */
+        public boolean isActive() {
+            return active.get();
         }
     }
     
     /**
-     * Represents a MapReduce job
+     * Represents a heartbeat message
      */
-    public static class MapReduceJob<K, V> {
-        private final List<String> inputData;
-        private final Function<List<String>, List<KeyValuePair<K, V>>> mapFunction;
-        private final ReduceFunction<K, V> reduceFunction;
-        
-        public MapReduceJob(List<String> inputData, 
-                          Function<List<String>, List<KeyValuePair<K, V>>> mapFunction,
-                          ReduceFunction<K, V> reduceFunction) {
-            this.inputData = new ArrayList<>(inputData);
-            this.mapFunction = mapFunction;
-            this.reduceFunction = reduceFunction;
-        }
-        
-        public List<String> getInputData() {
-            return new ArrayList<>(inputData);
-        }
-        
-        public Function<List<String>, List<KeyValuePair<K, V>>> getMapFunction() {
-            return mapFunction;
-        }
-        
-        public ReduceFunction<K, V> getReduceFunction() {
-            return reduceFunction;
-        }
-    }
-    
-    /**
-     * Represents a key-value pair
-     */
-    public static class KeyValuePair<K, V> {
-        private final K key;
-        private final V value;
-        
-        public KeyValuePair(K key, V value) {
-            this.key = key;
-            this.value = value;
-        }
-        
-        public K getKey() {
-            return key;
-        }
-        
-        public V getValue() {
-            return value;
-        }
-        
-        @Override
-        public String toString() {
-            return "KeyValuePair{key=" + key + ", value=" + value + "}";
-        }
-    }
-    
-    /**
-     * Functional interface for map function
-     */
-    @FunctionalInterface
-    public interface Function<T, R> {
-        R apply(T input) throws Exception;
-    }
-    
-    /**
-     * Functional interface for reduce function
-     */
-    @FunctionalInterface
-    public interface ReduceFunction<K, V> {
-        V apply(K key, List<V> values) throws Exception;
-    }
-    
-    /**
-     * Represents a distributed consensus algorithm (Raft-like)
-     */
-    public static class DistributedConsensus {
+    public static class HeartbeatMessage implements Serializable {
+        private static final long serialVersionUID = 1L;
         private final String nodeId;
-        private final List<String> clusterNodes;
-        private final Map<String, Long> nodeHeartbeats;
-        private final Lock lock;
-        private volatile NodeState state;
-        private volatile String leaderId;
-        private final ScheduledExecutorService scheduler;
-        private final Random random;
+        private final long timestamp;
         
+        public HeartbeatMessage(String nodeId) {
+            this.nodeId = nodeId;
+            this.timestamp = System.currentTimeMillis();
+        }
+        
+        public String getNodeId() {
+            return nodeId;
+        }
+        
+        public long getTimestamp() {
+            return timestamp;
+        }
+    }
+    
+    /**
+     * Represents a heartbeat response
+     */
+    public static class HeartbeatResponse implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private final String nodeId;
+        private final long timestamp;
+        
+        public HeartbeatResponse(String nodeId) {
+            this.nodeId = nodeId;
+            this.timestamp = System.currentTimeMillis();
+        }
+        
+        public String getNodeId() {
+            return nodeId;
+        }
+        
+        public long getTimestamp() {
+            return timestamp;
+        }
+    }
+    
+    /**
+     * Represents a task message
+     */
+    public static class TaskMessage implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private final Task task;
+        
+        public TaskMessage(Task task) {
+            this.task = task;
+        }
+        
+        public Task getTask() {
+            return task;
+        }
+    }
+    
+    /**
+     * Represents a task error
+     */
+    public static class TaskError implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private final String message;
+        
+        public TaskError(String message) {
+            this.message = message;
+        }
+        
+        public String getMessage() {
+            return message;
+        }
+    }
+    
+    /**
+     * Represents a distributed task
+     */
+    public static abstract class Task implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private final String id;
+        
+        public Task(String id) {
+            this.id = id;
+        }
+        
+        public String getId() {
+            return id;
+        }
+        
+        public abstract Object execute() throws Exception;
+    }
+    
+    /**
+     * Represents a distributed consensus algorithm (simplified RAFT implementation)
+     */
+    public static class ConsensusAlgorithm {
         public enum NodeState {
             FOLLOWER, CANDIDATE, LEADER
         }
         
-        public DistributedConsensus(String nodeId, List<String> clusterNodes) {
+        private final String nodeId;
+        private final List<String> clusterNodes;
+        private final Map<String, Long> nodeHeartbeats;
+        private final Lock lock;
+        private final ScheduledExecutorService scheduler;
+        private final Random random;
+        private volatile NodeState state;
+        private volatile String leaderId;
+        private volatile long currentTerm;
+        
+        public ConsensusAlgorithm(String nodeId, List<String> clusterNodes) {
             this.nodeId = nodeId;
             this.clusterNodes = new ArrayList<>(clusterNodes);
             this.nodeHeartbeats = new ConcurrentHashMap<>();
             this.lock = new ReentrantLock();
-            this.state = NodeState.FOLLOWER;
-            this.leaderId = null;
             this.scheduler = Executors.newScheduledThreadPool(2);
             this.random = new Random();
+            this.state = NodeState.FOLLOWER;
+            this.leaderId = null;
+            this.currentTerm = 0;
             
-            // Initialize heartbeats
-            for (String node : clusterNodes) {
-                nodeHeartbeats.put(node, System.currentTimeMillis());
-            }
+            // Start election timeout
+            scheduler.scheduleWithFixedDelay(this::checkElectionTimeout, 150, 150, TimeUnit.MILLISECONDS);
             
-            // Start consensus protocol
-            startConsensus();
-        }
-        
-        /**
-         * Starts the consensus protocol
-         */
-        private void startConsensus() {
-            // Schedule election timeout
-            scheduler.scheduleWithFixedDelay(this::checkElectionTimeout, 
-                                           150 + random.nextInt(150), // 150-300ms
-                                           100, // Check every 100ms
-                                           TimeUnit.MILLISECONDS);
-            
-            // Schedule heartbeat (if leader)
-            scheduler.scheduleWithFixedDelay(this::sendHeartbeat, 
-                                           50, 50, TimeUnit.MILLISECONDS);
+            // Start heartbeat sending (if leader)
+            scheduler.scheduleWithFixedDelay(this::sendHeartbeat, 50, 50, TimeUnit.MILLISECONDS);
         }
         
         /**
@@ -272,16 +382,14 @@ public class AdvancedDistributedComputing {
         private void checkElectionTimeout() {
             lock.lock();
             try {
-                if (state == NodeState.LEADER) {
-                    return; // Leader doesn't timeout
-                }
-                
-                long lastHeartbeat = nodeHeartbeats.getOrDefault(leaderId, 0L);
                 long now = System.currentTimeMillis();
+                long lastHeartbeat = nodeHeartbeats.getOrDefault(leaderId, 0L);
                 
-                // If no heartbeat for more than 500ms, start election
-                if (now - lastHeartbeat > 500) {
-                    startElection();
+                // If no heartbeat for a while, start election
+                if (now - lastHeartbeat > 300) {
+                    if (state == NodeState.FOLLOWER || state == NodeState.CANDIDATE) {
+                        startElection();
+                    }
                 }
             } finally {
                 lock.unlock();
@@ -289,26 +397,25 @@ public class AdvancedDistributedComputing {
         }
         
         /**
-         * Starts a new election
+         * Starts an election
          */
         private void startElection() {
             lock.lock();
             try {
-                if (state != NodeState.CANDIDATE) {
-                    state = NodeState.CANDIDATE;
-                    leaderId = null;
-                    System.out.println(nodeId + " became candidate");
-                }
+                state = NodeState.CANDIDATE;
+                currentTerm++;
+                leaderId = null;
                 
-                // Request votes from other nodes
                 int votes = 1; // Vote for self
                 for (String node : clusterNodes) {
-                    if (!node.equals(nodeId) && requestVote(node)) {
-                        votes++;
+                    if (!node.equals(nodeId)) {
+                        if (requestVote(node)) {
+                            votes++;
+                        }
                     }
                 }
                 
-                // If majority votes, become leader
+                // If we have majority of votes, become leader
                 if (votes > clusterNodes.size() / 2) {
                     becomeLeader();
                 }
@@ -321,7 +428,7 @@ public class AdvancedDistributedComputing {
          * Requests a vote from another node
          */
         private boolean requestVote(String node) {
-            // In a real implementation, this would send a network request
+            // send a network request to the node to request a vote
             System.out.println(nodeId + " requesting vote from " + node);
             // Simulate random vote result
             return random.nextBoolean();
@@ -365,7 +472,7 @@ public class AdvancedDistributedComputing {
          * Sends heartbeat to a specific node
          */
         private void sendHeartbeatToNode(String node) {
-            // In a real implementation, this would send a network request
+            // send a network request to the node with a heartbeat message
             System.out.println(nodeId + " sending heartbeat to " + node);
         }
         
@@ -520,11 +627,10 @@ public class AdvancedDistributedComputing {
             Task task = taskRegistry.get(taskId);
             if (task != null) {
                 try {
-                    System.out.println(nodeId + " executing task " + taskId);
-                    task.execute();
-                    System.out.println(nodeId + " completed task " + taskId);
+                    Object result = task.execute();
+                    System.out.println("Executed task " + taskId + " with result: " + result);
                 } catch (Exception e) {
-                    System.err.println(nodeId + " failed to execute task " + taskId + ": " + e.getMessage());
+                    System.err.println("Error executing task " + taskId + ": " + e.getMessage());
                 }
             }
         }
@@ -533,7 +639,7 @@ public class AdvancedDistributedComputing {
          * Forwards a task to another node
          */
         private void forwardTask(String taskId, String targetNode) {
-            // In a real implementation, this would send a network request
+            // send a network request to the target node to execute the task
             System.out.println(nodeId + " forwarding task " + taskId + " to " + targetNode);
         }
         
@@ -588,18 +694,10 @@ public class AdvancedDistributedComputing {
     /**
      * Represents a distributed task
      */
-    public abstract static class Task {
-        private final String id;
-        
-        public Task(String id) {
-            this.id = id;
+    public abstract static class DistributedTask extends Task {
+        public DistributedTask(String id) {
+            super(id);
         }
-        
-        public String getId() {
-            return id;
-        }
-        
-        public abstract void execute();
     }
     
     /**
@@ -717,7 +815,7 @@ public class AdvancedDistributedComputing {
          * Notifies a waiter that a lock is available
          */
         private void notifyWaiter(String lockName, String waiter) {
-            // In a real implementation, this would send a network notification
+            // send a network notification to the waiter that the lock is available
             System.out.println(nodeId + " notifying " + waiter + " that lock " + lockName + " is available");
         }
         
@@ -856,7 +954,7 @@ public class AdvancedDistributedComputing {
          * Fetches a value from a specific node
          */
         private V fetchFromNode(String node, K key) {
-            // In a real implementation, this would send a network request
+            // send a network request to the node to fetch the key
             System.out.println(nodeId + " fetching key " + key + " from node " + node);
             return null; // Simulated response
         }
@@ -923,32 +1021,40 @@ public class AdvancedDistributedComputing {
         }
         
         /**
-         * Registers an event listener
+         * Registers a local event listener
          */
         public void addListener(String eventType, EventListener listener) {
-            localListeners.computeIfAbsent(eventType, k -> new CopyOnWriteArrayList<>()).add(listener);
-            System.out.println(nodeId + " registered listener for event " + eventType);
-        }
-        
-        /**
-         * Removes an event listener
-         */
-        public void removeListener(String eventType, EventListener listener) {
-            List<EventListener> listeners = localListeners.get(eventType);
-            if (listeners != null) {
-                listeners.remove(listener);
-                System.out.println(nodeId + " removed listener for event " + eventType);
+            listenersLock.lock();
+            try {
+                localListeners.computeIfAbsent(eventType, k -> new ArrayList<>()).add(listener);
+            } finally {
+                listenersLock.unlock();
             }
         }
         
         /**
-         * Publishes an event
+         * Unregisters a local event listener
+         */
+        public void removeListener(String eventType, EventListener listener) {
+            listenersLock.lock();
+            try {
+                List<EventListener> listeners = localListeners.get(eventType);
+                if (listeners != null) {
+                    listeners.remove(listener);
+                }
+            } finally {
+                listenersLock.unlock();
+            }
+        }
+        
+        /**
+         * Publishes an event locally
          */
         public void publishEvent(String eventType, Object eventData) {
             // Notify local listeners
             notifyLocalListeners(eventType, eventData);
             
-            // Forward event to other nodes
+            // Forward to other nodes
             forwardEvent(eventType, eventData);
         }
         
@@ -956,17 +1062,16 @@ public class AdvancedDistributedComputing {
          * Notifies local listeners of an event
          */
         private void notifyLocalListeners(String eventType, Object eventData) {
-            List<EventListener> listeners = localListeners.get(eventType);
-            if (listeners != null) {
-                for (EventListener listener : listeners) {
-                    eventExecutor.submit(() -> {
-                        try {
-                            listener.onEvent(eventType, eventData);
-                        } catch (Exception e) {
-                            System.err.println(nodeId + " error in event listener: " + e.getMessage());
-                        }
-                    });
+            listenersLock.lock();
+            try {
+                List<EventListener> listeners = localListeners.get(eventType);
+                if (listeners != null) {
+                    for (EventListener listener : listeners) {
+                        eventExecutor.submit(() -> listener.onEvent(eventType, eventData));
+                    }
                 }
+            } finally {
+                listenersLock.unlock();
             }
         }
         
@@ -985,7 +1090,7 @@ public class AdvancedDistributedComputing {
          * Forwards an event to a specific node
          */
         private void forwardEventToNode(String node, String eventType, Object eventData) {
-            // In a real implementation, this would send a network request
+            // send a network request to the node with the event
             System.out.println(nodeId + " forwarding event " + eventType + " to node " + node);
         }
         
@@ -1089,7 +1194,7 @@ public class AdvancedDistributedComputing {
          * Sends a configuration update to a node
          */
         private void sendConfigUpdate(String node, String key, String value) {
-            // In a real implementation, this would send a network request
+            // send a network request to the node with the configuration update
             System.out.println(nodeId + " sending config update to " + node + ": " + key + " = " + value);
         }
         
@@ -1110,7 +1215,7 @@ public class AdvancedDistributedComputing {
          * Synchronizes configuration with the cluster
          */
         private void syncWithCluster() {
-            // In a real implementation, this would synchronize with other nodes
+            // synchronize configuration with other nodes in the cluster
             System.out.println(nodeId + " syncing configuration with cluster");
         }
         

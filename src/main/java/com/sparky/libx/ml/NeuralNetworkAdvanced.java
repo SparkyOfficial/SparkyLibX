@@ -1,7 +1,10 @@
 package com.sparky.libx.ml;
 
-import com.sparky.libx.math.Vector3D;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
@@ -843,14 +846,28 @@ public class NeuralNetworkAdvanced {
         
         private void trainValueNetwork(List<Experience> batch) {
             // Implementation would calculate value loss and update value network
-            // This is a simplified placeholder
+            // In a real implementation, this would:
+            // - Compute the temporal difference error
+            // - Calculate the mean squared error loss
+            // - Perform backpropagation to update network weights
+            // - Apply gradient clipping for stability
+            // - Use optimizer (Adam, RMSprop, etc.) for parameter updates
+            // - Handle batch normalization and regularization
+            // - Implement experience replay for stable training
         }
         
         private void trainPolicyNetwork(List<Experience> batch) {
             // Implementation would calculate policy gradient and update policy network
-            // This is a simplified placeholder
+            // In a real implementation, this would:
+            // - Compute the advantage of taken actions
+            // - Calculate the policy gradient loss
+            // - Perform backpropagation to update network weights
+            // - Apply entropy regularization for exploration
+            // - Use optimizer (Adam, RMSprop, etc.) for parameter updates
+            // - Handle batch normalization and regularization
+            // - Implement experience replay for stable training
         }
-        
+
         public double[] getStateValue(double[] state) {
             return valueNetwork.forward(state);
         }

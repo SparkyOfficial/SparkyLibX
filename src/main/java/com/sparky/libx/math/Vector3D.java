@@ -185,6 +185,14 @@ public class Vector3D {
         return new Vector(x, y, z);
     }
     
+    /**
+     * Создает копию этого вектора
+     * @return копия вектора
+     */
+    public Vector3D copy() {
+        return new Vector3D(x, y, z);
+    }
+    
     @Override
     public String toString() {
         return "Vector3D{" +

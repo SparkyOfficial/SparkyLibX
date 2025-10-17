@@ -1,17 +1,11 @@
 package com.sparky.libx.blockchain;
 
 import com.sparky.libx.crypto.Cryptography;
-import com.sparky.libx.math.Vector3D;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.*;
 
 /**
- * Blockchain Implementation for Minecraft Plugins
- * Provides capabilities for creating and managing blockchain networks, smart contracts, and cryptographic transactions
- * 
+ * Implementation of a blockchain system
  * @author Андрій Будильников
  */
 public class Blockchain {
@@ -20,124 +14,73 @@ public class Blockchain {
      * Represents a transaction in the blockchain
      */
     public static class Transaction {
-        private final String id;
         private final String sender;
         private final String recipient;
         private final double amount;
         private final long timestamp;
         private final String signature;
-        private final Map<String, Object> metadata;
         
         public Transaction(String sender, String recipient, double amount, String signature) {
-            this.id = UUID.randomUUID().toString();
             this.sender = sender;
             this.recipient = recipient;
             this.amount = amount;
             this.timestamp = System.currentTimeMillis();
             this.signature = signature;
-            this.metadata = new ConcurrentHashMap<>();
         }
         
-        public Transaction(String id, String sender, String recipient, double amount, 
-                          long timestamp, String signature, Map<String, Object> metadata) {
-            this.id = id;
-            this.sender = sender;
-            this.recipient = recipient;
-            this.amount = amount;
-            this.timestamp = timestamp;
-            this.signature = signature;
-            this.metadata = new ConcurrentHashMap<>(metadata);
-        }
-        
-        public String calculateHash() {
-            String data = sender + recipient + amount + timestamp + signature;
-            for (Map.Entry<String, Object> entry : metadata.entrySet()) {
-                data += entry.getKey() + entry.getValue();
-            }
-            return Cryptography.sha256(data);
-        }
-        
-        public boolean isValid() {
-            // Check if transaction has valid signature
-            if (signature == null || signature.isEmpty()) {
+        public boolean isValid(Chain blockchain) {
+            // check if transaction is valid
+            if (sender == null || recipient == null || amount <= 0) {
                 return false;
             }
             
-            // Check if amount is positive
-            if (amount <= 0) {
+            // verify signature
+            String transactionData = sender + recipient + amount + timestamp;
+            if (!Cryptography.verifySignature(transactionData, signature, sender)) {
                 return false;
             }
             
-            // Check if sender and recipient are different
-            if (sender.equals(recipient)) {
+            // check sender balance
+            if (blockchain.getBalance(sender) < amount) {
                 return false;
             }
             
             return true;
         }
         
-        public String getId() {
-            return id;
-        }
-        
-        public String getSender() {
-            return sender;
-        }
-        
-        public String getRecipient() {
-            return recipient;
-        }
-        
-        public double getAmount() {
-            return amount;
-        }
-        
-        public long getTimestamp() {
-            return timestamp;
-        }
-        
-        public String getSignature() {
-            return signature;
-        }
-        
-        public Map<String, Object> getMetadata() {
-            return new HashMap<>(metadata);
-        }
-        
-        public void addMetadata(String key, Object value) {
-            metadata.put(key, value);
-        }
-        
-        public <T> T getMetadata(String key, Class<T> type) {
-            Object value = metadata.get(key);
-            if (type.isInstance(value)) {
-                return type.cast(value);
-            }
-            return null;
-        }
+        // getters
+        public String getSender() { return sender; }
+        public String getRecipient() { return recipient; }
+        public double getAmount() { return amount; }
+        public long getTimestamp() { return timestamp; }
+        public String getSignature() { return signature; }
         
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             Transaction that = (Transaction) o;
-            return id.equals(that.id);
+            return Double.compare(that.amount, amount) == 0 &&
+                   timestamp == that.timestamp &&
+                   Objects.equals(sender, that.sender) &&
+                   Objects.equals(recipient, that.recipient) &&
+                   Objects.equals(signature, that.signature);
         }
         
         @Override
         public int hashCode() {
-            return id.hashCode();
+            return Objects.hash(sender, recipient, amount, timestamp, signature);
         }
         
         @Override
         public String toString() {
             return "Transaction{" +
-                    "id='" + id + '\'' +
-                    ", sender='" + sender + '\'' +
-                    ", recipient='" + recipient + '\'' +
-                    ", amount=" + amount +
-                    ", timestamp=" + timestamp +
-                    '}';
+                   "sender='" + sender + '\'' +
+                   ", recipient='" + recipient + '\'' +
+                   ", amount=" + amount +
+                   ", timestamp=" + timestamp +
+                   ", signature='" + signature + '\'' +
+                   '}';
         }
     }
     
@@ -150,165 +93,101 @@ public class Blockchain {
         private final List<Transaction> transactions;
         private final String previousHash;
         private final String hash;
-        private final String merkleRoot;
-        private final long nonce;
+        private final int nonce;
         
         public Block(int index, List<Transaction> transactions, String previousHash) {
             this.index = index;
             this.timestamp = System.currentTimeMillis();
             this.transactions = new ArrayList<>(transactions);
             this.previousHash = previousHash;
-            this.merkleRoot = calculateMerkleRoot();
             this.nonce = 0;
             this.hash = calculateHash();
         }
         
         public Block(int index, long timestamp, List<Transaction> transactions, 
-                    String previousHash, String merkleRoot, long nonce, String hash) {
+                    String previousHash, String hash, int nonce) {
             this.index = index;
             this.timestamp = timestamp;
             this.transactions = new ArrayList<>(transactions);
             this.previousHash = previousHash;
-            this.merkleRoot = merkleRoot;
-            this.nonce = nonce;
             this.hash = hash;
+            this.nonce = nonce;
         }
         
         public String calculateHash() {
-            String data = index + timestamp + merkleRoot + previousHash + nonce;
-            return Cryptography.sha256(data);
+            String dataToHash = index + timestamp + transactions.toString() + previousHash + nonce;
+            return Cryptography.sha256(dataToHash);
         }
         
-        private String calculateMerkleRoot() {
-            if (transactions.isEmpty()) {
-                return Cryptography.sha256("");
-            }
-            
-            List<String> hashes = new ArrayList<>();
+        public boolean hasValidTransactions(Chain blockchain) {
             for (Transaction transaction : transactions) {
-                hashes.add(transaction.calculateHash());
-            }
-            
-            while (hashes.size() > 1) {
-                List<String> newHashes = new ArrayList<>();
-                for (int i = 0; i < hashes.size(); i += 2) {
-                    String left = hashes.get(i);
-                    String right = (i + 1 < hashes.size()) ? hashes.get(i + 1) : left;
-                    String combined = left + right;
-                    newHashes.add(Cryptography.sha256(combined));
-                }
-                hashes = newHashes;
-            }
-            
-            return hashes.get(0);
-        }
-        
-        public boolean isValid(Block previousBlock) {
-            // Check index
-            if (index != previousBlock.index + 1) {
-                return false;
-            }
-            
-            // Check previous hash
-            if (!previousHash.equals(previousBlock.hash)) {
-                return false;
-            }
-            
-            // Check hash
-            if (!hash.equals(calculateHash())) {
-                return false;
-            }
-            
-            // Check timestamp
-            if (timestamp <= previousBlock.timestamp) {
-                return false;
-            }
-            
-            // Check transactions
-            for (Transaction transaction : transactions) {
-                if (!transaction.isValid()) {
+                if (!transaction.isValid(blockchain)) {
                     return false;
                 }
             }
-            
             return true;
         }
         
-        public int getIndex() {
-            return index;
-        }
-        
-        public long getTimestamp() {
-            return timestamp;
-        }
-        
-        public List<Transaction> getTransactions() {
-            return new ArrayList<>(transactions);
-        }
-        
-        public String getPreviousHash() {
-            return previousHash;
-        }
-        
-        public String getHash() {
-            return hash;
-        }
-        
-        public String getMerkleRoot() {
-            return merkleRoot;
-        }
-        
-        public long getNonce() {
-            return nonce;
-        }
+        // getters
+        public int getIndex() { return index; }
+        public long getTimestamp() { return timestamp; }
+        public List<Transaction> getTransactions() { return new ArrayList<>(transactions); }
+        public String getPreviousHash() { return previousHash; }
+        public String getHash() { return hash; }
+        public int getNonce() { return nonce; }
         
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             Block block = (Block) o;
-            return index == block.index && hash.equals(block.hash);
+            return index == block.index &&
+                   timestamp == block.timestamp &&
+                   nonce == block.nonce &&
+                   Objects.equals(transactions, block.transactions) &&
+                   Objects.equals(previousHash, block.previousHash) &&
+                   Objects.equals(hash, block.hash);
         }
         
         @Override
         public int hashCode() {
-            return Objects.hash(index, hash);
+            return Objects.hash(index, timestamp, transactions, previousHash, hash, nonce);
         }
         
         @Override
         public String toString() {
             return "Block{" +
-                    "index=" + index +
-                    ", timestamp=" + timestamp +
-                    ", transactions=" + transactions.size() +
-                    ", previousHash='" + previousHash + '\'' +
-                    ", hash='" + hash + '\'' +
-                    '}';
+                   "index=" + index +
+                   ", timestamp=" + timestamp +
+                   ", transactions=" + transactions +
+                   ", previousHash='" + previousHash + '\'' +
+                   ", hash='" + hash + '\'' +
+                   ", nonce=" + nonce +
+                   '}';
         }
     }
     
     /**
-     * Represents a blockchain network
+     * Represents the blockchain itself
      */
     public static class Chain {
         private final List<Block> chain;
-        private final Map<String, Double> balances;
+        private final List<Transaction> pendingTransactions;
         private final int difficulty;
         private final double miningReward;
         
         public Chain(int difficulty, double miningReward) {
             this.chain = new CopyOnWriteArrayList<>();
-            this.balances = new ConcurrentHashMap<>();
+            this.pendingTransactions = new CopyOnWriteArrayList<>();
             this.difficulty = difficulty;
             this.miningReward = miningReward;
             
-            // Create genesis block
+            // create genesis block
             createGenesisBlock();
         }
         
         private void createGenesisBlock() {
-            List<Transaction> genesisTransactions = new ArrayList<>();
-            Block genesisBlock = new Block(0, genesisTransactions, "0");
+            Block genesisBlock = new Block(0, new ArrayList<>(), "0");
             chain.add(genesisBlock);
         }
         
@@ -316,109 +195,87 @@ public class Blockchain {
             return chain.get(chain.size() - 1);
         }
         
-        public Block mineBlock(List<Transaction> transactions, String minerAddress) {
-            // Add mining reward transaction
-            Transaction rewardTx = new Transaction("NETWORK", minerAddress, miningReward, "MINING_REWARD");
-            transactions.add(rewardTx);
-            
-            // Create new block
-            Block newBlock = new Block(chain.size(), transactions, getLatestBlock().getHash());
-            
-            // Mine the block (proof of work)
-            Block minedBlock = mineBlockWithProofOfWork(newBlock);
-            
-            // Add to chain if valid
-            if (isBlockValid(minedBlock, getLatestBlock())) {
-                chain.add(minedBlock);
-                updateBalances(minedBlock);
-                return minedBlock;
-            }
-            
-            return null;
-        }
-        
-        private Block mineBlockWithProofOfWork(Block block) {
-            String target = new String(new char[difficulty]).replace('\0', '0');
-            long nonce = 0;
-            
-            while (!block.calculateHash().substring(0, difficulty).equals(target)) {
-                nonce++;
-                // Create new block with updated nonce
-                Block newBlock = new Block(
-                    block.getIndex(),
-                    block.getTimestamp(),
-                    block.getTransactions(),
-                    block.getPreviousHash(),
-                    block.getMerkleRoot(),
-                    nonce,
-                    "" // Hash will be recalculated
-                );
-                
-                // Recalculate hash with new nonce
-                String hash = newBlock.calculateHash();
-                // Create final block with correct hash
-                block = new Block(
-                    block.getIndex(),
-                    block.getTimestamp(),
-                    block.getTransactions(),
-                    block.getPreviousHash(),
-                    block.getMerkleRoot(),
-                    nonce,
-                    hash
-                );
-            }
-            
-            return block;
-        }
-        
         public boolean addTransaction(Transaction transaction) {
-            // Verify transaction
-            if (!transaction.isValid()) {
+            if (transaction == null) {
                 return false;
             }
             
-            // Check if sender has sufficient balance
-            if (getBalance(transaction.getSender()) < transaction.getAmount()) {
+            if (!transaction.isValid(this)) {
+                System.err.println("could not add invalid transaction to chain");
                 return false;
             }
             
-            // Add to pending transactions (in a real implementation, this would be stored separately)
+            pendingTransactions.add(transaction);
             return true;
         }
         
-        private boolean isBlockValid(Block newBlock, Block previousBlock) {
-            return newBlock.isValid(previousBlock);
-        }
-        
-        private void updateBalances(Block block) {
-            for (Transaction transaction : block.getTransactions()) {
-                // Deduct from sender
-                balances.put(transaction.getSender(), 
-                    balances.getOrDefault(transaction.getSender(), 0.0) - transaction.getAmount());
-                
-                // Add to recipient
-                balances.put(transaction.getRecipient(), 
-                    balances.getOrDefault(transaction.getRecipient(), 0.0) + transaction.getAmount());
+        public Block mineBlock(List<Transaction> transactions, String minerAddress) {
+            // add mining reward transaction
+            Transaction rewardTx = new Transaction("BLOCKCHAIN_REWARD", minerAddress, miningReward, "REWARD");
+            List<Transaction> blockTransactions = new ArrayList<>(transactions);
+            blockTransactions.add(rewardTx);
+            
+            Block newBlock = new Block(
+                getLatestBlock().getIndex() + 1,
+                blockTransactions,
+                getLatestBlock().getHash()
+            );
+            
+            // proof of work
+            String target = new String(new char[difficulty]).replace('\0', '0');
+            while (!newBlock.getHash().substring(0, difficulty).equals(target)) {
+                newBlock = new Block(
+                    newBlock.getIndex(),
+                    newBlock.getTimestamp() + 1, // increment timestamp to change hash
+                    newBlock.getTransactions(),
+                    newBlock.getPreviousHash(),
+                    newBlock.getHash(),
+                    newBlock.getNonce() + 1
+                );
             }
+            
+            chain.add(newBlock);
+            return newBlock;
         }
         
         public double getBalance(String address) {
-            return balances.getOrDefault(address, 0.0);
+            double balance = 0;
+            
+            for (Block block : chain) {
+                for (Transaction transaction : block.getTransactions()) {
+                    if (transaction.getRecipient().equals(address)) {
+                        balance += transaction.getAmount();
+                    }
+                    
+                    if (transaction.getSender().equals(address)) {
+                        balance -= transaction.getAmount();
+                    }
+                }
+            }
+            
+            return balance;
         }
         
         public boolean isChainValid() {
-            // Check genesis block
-            Block genesisBlock = chain.get(0);
-            if (genesisBlock.getIndex() != 0 || !genesisBlock.getPreviousHash().equals("0")) {
-                return false;
-            }
-            
-            // Check all other blocks
             for (int i = 1; i < chain.size(); i++) {
                 Block currentBlock = chain.get(i);
                 Block previousBlock = chain.get(i - 1);
                 
-                if (!currentBlock.isValid(previousBlock)) {
+                // validate current block's hash
+                if (!currentBlock.getHash().equals(currentBlock.calculateHash())) {
+                    System.err.println("invalid block hash");
+                    return false;
+                }
+                
+                // validate link between blocks
+                if (!currentBlock.getPreviousHash().equals(previousBlock.getHash())) {
+                    System.err.println("invalid previous hash");
+                    return false;
+                }
+                
+                // validate transactions in block
+                if (!currentBlock.hasValidTransactions(this)) {
+                    System.err.println("invalid transactions in block");
                     return false;
                 }
             }
@@ -426,25 +283,12 @@ public class Blockchain {
             return true;
         }
         
-        public List<Block> getChain() {
-            return new ArrayList<>(chain);
-        }
-        
-        public int getDifficulty() {
-            return difficulty;
-        }
-        
-        public double getMiningReward() {
-            return miningReward;
-        }
-        
         public int getChainLength() {
             return chain.size();
         }
         
         public List<Transaction> getPendingTransactions() {
-            // In a real implementation, this would return actual pending transactions
-            return new ArrayList<>();
+            return new ArrayList<>(pendingTransactions);
         }
     }
     
@@ -606,16 +450,16 @@ public class Blockchain {
         }
         
         private void broadcastTransaction(Transaction transaction) {
+            // send the transaction to all connected nodes
             for (Node node : connectedNodes) {
-                // In a real implementation, this would send the transaction over the network
-                // node.receiveTransaction(transaction);
+                node.receiveTransaction(transaction);
             }
         }
         
         private void broadcastBlock(Block block) {
+            // send the block to all connected nodes
             for (Node node : connectedNodes) {
-                // In a real implementation, this would send the block over the network
-                // node.receiveBlock(block);
+                node.receiveBlock(block);
             }
         }
         
@@ -626,7 +470,11 @@ public class Blockchain {
         }
         
         public void receiveBlock(Block block) {
-            // In a real implementation, this would validate and add the block to the chain
+            // validate and add the block to the chain
+            if (block.hasValidTransactions(blockchain) && 
+                block.getPreviousHash().equals(blockchain.getLatestBlock().getHash())) {
+                blockchain.chain.add(block);
+            }
         }
         
         public Chain getBlockchain() {

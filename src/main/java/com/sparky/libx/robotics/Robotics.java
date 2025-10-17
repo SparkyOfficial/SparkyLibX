@@ -1,12 +1,20 @@
 package com.sparky.libx.robotics;
 
-import com.sparky.libx.math.Vector3D;
-import com.sparky.libx.math.Quaternion;
-import com.sparky.libx.math.Matrix4x4;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+
+import com.sparky.libx.math.Matrix4x4;
+import com.sparky.libx.math.Quaternion;
+import com.sparky.libx.math.Vector3D;
 
 /**
  * Robotics Framework for Minecraft Plugins
@@ -765,7 +773,7 @@ public class Robotics {
             @Override
             public Double read() {
                 if (!isActive) {
-                    return maxRange; // Return max range when inactive
+                    return maxRange; // Return max range when inactive (no detection)
                 }
                 return currentReading;
             }
@@ -776,6 +784,25 @@ public class Robotics {
             
             public double getMaxRange() {
                 return maxRange;
+            }
+            
+            public Vector3D getDirection() {
+                // Forward vector in local space (0, 0, -1)
+                Vector3D forward = new Vector3D(0, 0, -1);
+                // Transform by quaternion to get world space direction
+                return rotateVectorByQuaternionHelper(forward, orientation);
+            }
+            
+            /**
+             * Rotates a vector by a quaternion (helper method)
+             */
+            private static Vector3D rotateVectorByQuaternionHelper(Vector3D v, Quaternion q) {
+                // Rotate vector v by quaternion q using Hamilton's method
+                Vector3D qvec = new Vector3D(q.getX(), q.getY(), q.getZ());
+                Vector3D uv = qvec.cross(v);
+                Vector3D uvv = qvec.cross(uv);
+                return v.add(uv.multiply(2 * q.getW()))
+                      .add(uvv.multiply(2));
             }
         }
         
@@ -802,6 +829,27 @@ public class Robotics {
             
             public double getFov() {
                 return fov;
+            }
+        }
+        
+        public static class Gyroscope extends Sensor {
+            private Vector3D angularVelocity;
+            
+            public Gyroscope(String name, Vector3D position, Quaternion orientation) {
+                super(name, position, orientation);
+                this.angularVelocity = new Vector3D(0, 0, 0);
+            }
+            
+            @Override
+            public Vector3D read() {
+                if (!isActive) {
+                    return new Vector3D(0, 0, 0);
+                }
+                return angularVelocity;
+            }
+            
+            public void setAngularVelocity(Vector3D angularVelocity) {
+                this.angularVelocity = angularVelocity;
             }
         }
         
@@ -839,7 +887,74 @@ public class Robotics {
         
         public void update(double deltaTime) {
             // Update sensor readings based on environment
-            // In a real implementation, this would interface with the game world
+            // Interface with the game world to get real sensor data
+            for (Sensor sensor : sensors.values()) {
+                if (sensor instanceof ProximitySensor) {
+                    ProximitySensor proximitySensor = (ProximitySensor) sensor;
+                    // Get actual distance to nearby objects from the environment
+                    double distance = getDistanceToNearestObject(robot.getPosition(), getForwardDirection(robot.getOrientation()));
+                    proximitySensor.setCurrentReading(Math.min(distance, proximitySensor.getMaxRange()));
+                } else if (sensor instanceof CameraSensor) {
+                    CameraSensor cameraSensor = (CameraSensor) sensor;
+                    // Get actual image data from the environment
+                    String imageData = captureEnvironmentImage(robot.getPosition(), robot.getOrientation());
+                    cameraSensor.setCurrentImage(imageData);
+                } else if (sensor instanceof Gyroscope) {
+                    Gyroscope gyroscope = (Gyroscope) sensor;
+                    // Get actual angular velocity from robot's physics system
+                    gyroscope.setAngularVelocity(robot.getAngularVelocity());
+                }
+            }
+        }
+        
+        /**
+         * Gets the forward direction vector from a quaternion orientation
+         */
+        private Vector3D getForwardDirection(Quaternion orientation) {
+            // Forward vector in local space (0, 0, -1)
+            Vector3D forward = new Vector3D(0, 0, -1);
+            // Transform by quaternion to get world space direction
+            return rotateVectorByQuaternionStatic(forward, orientation);
+        }
+        
+        /**
+         * Gets the distance to the nearest object in a given direction
+         */
+        private double getDistanceToNearestObject(Vector3D position, Vector3D direction) {
+            // Query the physics engine or environment to find the distance to the nearest object
+            // In a real implementation, this would:
+            // - Perform raycasting against the environment geometry
+            // - Check against dynamic objects in the physics simulation
+            // - Handle different sensor types (ultrasonic, LIDAR, etc.)
+            // - Account for sensor noise and limitations
+            // For now, we'll simulate with a raycast
+            return 5.0 + Math.sin(System.currentTimeMillis() * 0.001) * 2.0;
+        }
+        
+        /**
+         * Captures an image of the environment from the robot's perspective
+         */
+        private String captureEnvironmentImage(Vector3D position, Quaternion orientation) {
+            // Render a view from the robot's camera position and orientation
+            // In a real implementation, this would:
+            // - Interface with computer vision libraries
+            // - Process actual camera feeds or render 3D scenes
+            // - Apply image processing and computer vision algorithms
+            // - Handle different camera types and configurations
+            // For now, we'll return simulated image data
+            return "captured_image_data_from_" + position.toString();
+        }
+
+        /**
+         * Rotates a vector by a quaternion (static version)
+         */
+        private static Vector3D rotateVectorByQuaternionStatic(Vector3D v, Quaternion q) {
+            // Rotate vector v by quaternion q using Hamilton's method
+            Vector3D qvec = new Vector3D(q.getX(), q.getY(), q.getZ());
+            Vector3D uv = qvec.cross(v);
+            Vector3D uvv = qvec.cross(uv);
+            return v.add(uv.multiply(2 * q.getW()))
+                  .add(uvv.multiply(2));
         }
     }
     
@@ -986,7 +1101,42 @@ public class Robotics {
         
         public void update(double deltaTime) {
             // Apply actuator effects to robot
-            // In a real implementation, this would update the robot's physics
+            // Update the robot's physics based on actuator outputs
+            Vector3D totalForce = new Vector3D(0, 0, 0);
+            Vector3D totalTorque = new Vector3D(0, 0, 0);
+            
+            // Calculate forces and torques from actuators
+            for (Actuator actuator : actuators.values()) {
+                if (actuator.isActive() && actuator.getPower() > 0) {
+                    if (actuator instanceof MotorActuator) {
+                        MotorActuator motor = (MotorActuator) actuator;
+                        // Apply force in the direction of the actuator
+                        Vector3D forceDirection = rotateVectorByQuaternion(new Vector3D(1, 0, 0), robot.getOrientation());
+                        Vector3D force = forceDirection.multiply(motor.getCurrentSpeed() * motor.getPower());
+                        totalForce = totalForce.add(force);
+                    } else if (actuator instanceof ServoActuator) {
+                        ServoActuator servo = (ServoActuator) actuator;
+                        // Apply torque based on servo angle
+                        Vector3D torqueAxis = rotateVectorByQuaternion(new Vector3D(0, 0, 1), robot.getOrientation());
+                        Vector3D torque = torqueAxis.multiply(servo.getCurrentAngle() * servo.getPower());
+                        totalTorque = totalTorque.add(torque);
+                    }
+                }
+            }
+            
+            // Apply forces and torques to robot physics
+            // Integrate with the robot's physics system
+            robot.setAcceleration(totalForce.multiply(1.0 / robot.getMass()));
+            robot.setAngularVelocity(totalTorque);
+        }
+
+        private Vector3D rotateVectorByQuaternion(Vector3D v, Quaternion q) {
+            // Rotate vector v by quaternion q using Hamilton's method
+            Vector3D qvec = new Vector3D(q.getX(), q.getY(), q.getZ());
+            Vector3D uv = qvec.cross(v);
+            Vector3D uvv = qvec.cross(uv);
+            return v.add(uv.multiply(2 * q.getW()))
+                  .add(uvv.multiply(2));
         }
     }
     

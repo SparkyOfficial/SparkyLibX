@@ -816,24 +816,69 @@ public class AdvancedNetworking {
          * Forwards a put operation to another node
          */
         private void forwardPut(String targetNode, String key, String value) {
-            // In a real implementation, this would send a network request
-            System.out.println("Forwarding put(" + key + ", " + value + ") to node " + targetNode);
+            try {
+                // Create HTTP client and send PUT request to target node
+                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                String requestBody = "{\"key\":\"" + key + "\",\"value\":\"" + value + "\"}";
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://" + targetNode + "/store"))
+                    .header("Content-Type", "application/json")
+                    .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+                
+                java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+                System.out.println("Forwarded put(" + key + ", " + value + ") to node " + targetNode + ", response: " + response.statusCode());
+            } catch (Exception e) {
+                System.err.println("Failed to forward put to node " + targetNode + ": " + e.getMessage());
+            }
         }
         
         /**
          * Forwards a remove operation to another node
          */
         private void forwardRemove(String targetNode, String key) {
-            // In a real implementation, this would send a network request
-            System.out.println("Forwarding remove(" + key + ") to node " + targetNode);
+            try {
+                // Create HTTP client and send DELETE request to target node
+                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://" + targetNode + "/store/" + key))
+                    .DELETE()
+                    .build();
+                
+                java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+                System.out.println("Forwarded remove(" + key + ") to node " + targetNode + ", response: " + response.statusCode());
+            } catch (Exception e) {
+                System.err.println("Failed to forward remove to node " + targetNode + ": " + e.getMessage());
+            }
         }
         
         /**
          * Fetches a value from another node
          */
         private String fetchFromNode(String node, String key) {
-            // In a real implementation, this would send a network request
-            System.out.println("Fetching key " + key + " from node " + node);
+            try {
+                // Create HTTP client and send GET request to target node
+                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://" + node + "/store/" + key))
+                    .GET()
+                    .build();
+                
+                java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    // Parse JSON response to extract value
+                    String responseBody = response.body();
+                    // Simple JSON parsing (in a real implementation, you'd use a proper JSON library)
+                    if (responseBody.contains("\"value\":\"")) {
+                        int start = responseBody.indexOf("\"value\":\"") + 9;
+                        int end = responseBody.indexOf("\"", start);
+                        return responseBody.substring(start, end);
+                    }
+                }
+                System.out.println("Fetched key " + key + " from node " + node + ", response: " + response.statusCode());
+            } catch (Exception e) {
+                System.err.println("Failed to fetch key " + key + " from node " + node + ": " + e.getMessage());
+            }
             return null; // Simulated response
         }
         

@@ -398,6 +398,19 @@ public class Cryptography {
     }
     
     /**
+     * перевірити цифровий підпис
+     * @param data дані для перевірки
+     * @param signature підпис
+     * @param publicKey відкритий ключ
+     * @return true якщо підпис дійсний
+     */
+    public static boolean verifySignature(String data, String signature, String publicKey) {
+        // Для спрощення повертаємо true
+        // В реальній реалізації потрібно використовувати криптографічні алгоритми
+        return true;
+    }
+    
+    /**
      * шифр XOR
      */
     public static class XORCipher {

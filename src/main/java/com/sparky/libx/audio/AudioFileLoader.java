@@ -1,105 +1,114 @@
 package com.sparky.libx.audio;
 
-import com.sparky.libx.audio.AudioEngine.AudioClip;
 import javax.sound.sampled.*;
 import java.io.*;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * advanced audio file loader for loading various audio formats
- * supports wav, aiff, au, and other formats supported by java sound api
+ * Utility class for loading and saving audio files
  * @author Андрій Будильников
  */
 public class AudioFileLoader {
     
     /**
-     * load audio clip from file path
+     * Load audio clip from file
      */
-    public static AudioClip loadAudioClip(String filePath, String name) throws Exception {
+    public static AudioEngine.AudioClip loadAudioClip(String filePath, String name) throws Exception {
         File file = new File(filePath);
         if (!file.exists()) {
             throw new FileNotFoundException("audio file not found: " + filePath);
         }
         
-        AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(file);
-        return createAudioClipFromStream(audioInputStream, name);
+        AudioInputStream audioStream = AudioSystem.getAudioInputStream(file);
+        AudioFormat format = audioStream.getFormat();
+        
+        // convert to PCM format if needed
+        if (format.getEncoding() != AudioFormat.Encoding.PCM_SIGNED) {
+            format = new AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED,
+                format.getSampleRate(),
+                16,
+                format.getChannels(),
+                format.getChannels() * 2,
+                format.getSampleRate(),
+                false
+            );
+            audioStream = AudioSystem.getAudioInputStream(format, audioStream);
+        }
+        
+        // read all audio data
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] data = new byte[1024];
+        int bytesRead;
+        while ((bytesRead = audioStream.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, bytesRead);
+        }
+        
+        audioStream.close();
+        byte[] audioData = buffer.toByteArray();
+        
+        return new AudioEngine.AudioClip(name, audioData, format);
     }
     
     /**
-     * load audio clip from url
+     * Load audio clip from resource
      */
-    public static AudioClip loadAudioClip(URL url, String name) throws Exception {
-        AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(url);
-        return createAudioClipFromStream(audioInputStream, name);
-    }
-    
-    /**
-     * load audio clip from resource
-     */
-    public static AudioClip loadAudioResource(String resourcePath, String name) throws Exception {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+    public static AudioEngine.AudioClip loadAudioResource(String resourcePath, String name) throws Exception {
+        ClassLoader classLoader = AudioFileLoader.class.getClassLoader();
         URL resourceUrl = classLoader.getResource(resourcePath);
+        
         if (resourceUrl == null) {
             throw new FileNotFoundException("audio resource not found: " + resourcePath);
         }
         
-        AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(resourceUrl);
-        return createAudioClipFromStream(audioInputStream, name);
-    }
-    
-    /**
-     * load audio clip from input stream
-     */
-    public static AudioClip loadAudioStream(InputStream inputStream, String name) throws Exception {
-        AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(inputStream);
-        return createAudioClipFromStream(audioInputStream, name);
-    }
-    
-    /**
-     * create audio clip from audio input stream
-     */
-    private static AudioClip createAudioClipFromStream(AudioInputStream audioInputStream, String name) throws Exception {
-        try {
-            AudioFormat format = audioInputStream.getFormat();
-            AudioFormat targetFormat = AudioFormatConverter.getCompatibleFormat(format);
-            
-            // convert to target format if needed
-            AudioInputStream convertedStream;
-            if (!format.matches(targetFormat)) {
-                convertedStream = AudioSystem.getAudioInputStream(targetFormat, audioInputStream);
-            } else {
-                convertedStream = audioInputStream;
-            }
-            
-            // read all audio data
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = convertedStream.read(buffer)) != -1) {
-                baos.write(buffer, 0, bytesRead);
-            }
-            
-            byte[] audioData = baos.toByteArray();
-            return new AudioClip(name, audioData, targetFormat);
-        } finally {
-            audioInputStream.close();
+        AudioInputStream audioStream = AudioSystem.getAudioInputStream(resourceUrl);
+        AudioFormat format = audioStream.getFormat();
+        
+        // convert to PCM format if needed
+        if (format.getEncoding() != AudioFormat.Encoding.PCM_SIGNED) {
+            format = new AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED,
+                format.getSampleRate(),
+                16,
+                format.getChannels(),
+                format.getChannels() * 2,
+                format.getSampleRate(),
+                false
+            );
+            audioStream = AudioSystem.getAudioInputStream(format, audioStream);
         }
+        
+        // read all audio data
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] data = new byte[1024];
+        int bytesRead;
+        while ((bytesRead = audioStream.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, bytesRead);
+        }
+        
+        audioStream.close();
+        byte[] audioData = buffer.toByteArray();
+        
+        return new AudioEngine.AudioClip(name, audioData, format);
     }
     
     /**
-     * save audio clip to file (wav format)
+     * Save audio clip to file
      */
-    public static void saveAudioClip(AudioClip clip, String filePath) throws Exception {
+    public static void saveAudioClip(AudioEngine.AudioClip clip, String filePath) throws Exception {
         File file = new File(filePath);
         AudioFormat format = clip.getFormat();
         byte[] audioData = clip.getData();
         
-        // create audio input stream
-        ByteArrayInputStream bais = new ByteArrayInputStream(audioData);
-        AudioInputStream audioInputStream = new AudioInputStream(bais, format, audioData.length / format.getFrameSize());
+        // create audio input stream from data
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(audioData);
+        AudioInputStream audioInputStream = new AudioInputStream(byteArrayInputStream, format, audioData.length / format.getFrameSize());
         
         // write to file
         AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, file);
+        audioInputStream.close();
     }
     
     /**
@@ -110,7 +119,7 @@ public class AudioFileLoader {
     }
     
     /**
-     * check if a file format is supported
+     * check if file type is supported
      */
     public static boolean isFileTypeSupported(AudioFileFormat.Type fileType) {
         return AudioSystem.isFileTypeSupported(fileType);
@@ -120,14 +129,34 @@ public class AudioFileLoader {
      * get supported audio formats
      */
     public static AudioFormat[] getSupportedFormats() {
-        // this is a simplified implementation
-        // in a real application, you would query the system for supported formats
-        return new AudioFormat[] {
-            new AudioFormat(8000, 8, 1, false, false),   // 8kHz, 8-bit, mono, unsigned
-            new AudioFormat(11025, 8, 1, false, false),  // 11kHz, 8-bit, mono, unsigned
-            new AudioFormat(22050, 16, 1, true, false),  // 22kHz, 16-bit, mono, signed
-            new AudioFormat(44100, 16, 2, true, false),  // 44kHz, 16-bit, stereo, signed
-            new AudioFormat(48000, 16, 2, true, false)   // 48kHz, 16-bit, stereo, signed
-        };
+        // get supported formats from the system
+        List<AudioFormat> formats = new ArrayList<>();
+        
+        // common formats
+        formats.add(new AudioFormat(8000, 8, 1, false, false));   // 8kHz, 8-bit, mono, unsigned
+        formats.add(new AudioFormat(11025, 8, 1, false, false));  // 11kHz, 8-bit, mono, unsigned
+        formats.add(new AudioFormat(22050, 16, 1, true, false));  // 22kHz, 16-bit, mono, signed
+        formats.add(new AudioFormat(44100, 16, 2, true, false));  // 44kHz, 16-bit, stereo, signed
+        formats.add(new AudioFormat(48000, 16, 2, true, false));  // 48kHz, 16-bit, stereo, signed
+        
+        // query system for additional formats
+        Mixer.Info[] mixers = AudioSystem.getMixerInfo();
+        for (Mixer.Info mixerInfo : mixers) {
+            Mixer mixer = AudioSystem.getMixer(mixerInfo);
+            Line.Info[] sourceLines = mixer.getSourceLineInfo();
+            for (Line.Info lineInfo : sourceLines) {
+                if (lineInfo instanceof DataLine.Info) {
+                    DataLine.Info dataLineInfo = (DataLine.Info) lineInfo;
+                    AudioFormat[] lineFormats = dataLineInfo.getFormats();
+                    for (AudioFormat format : lineFormats) {
+                        if (!formats.contains(format)) {
+                            formats.add(format);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return formats.toArray(new AudioFormat[0]);
     }
 }
